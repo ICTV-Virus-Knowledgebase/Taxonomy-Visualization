@@ -7,7 +7,7 @@ GO
 -- Author: don dempsey
 -- Created on: 07/25/22
 -- Description:	Export non-species taxon_json records as JSON for the specified treeID.
--- Updated: 
+-- Updated: 02/21/23 dmd: names in the legend are now "Unassigned" instead of null.
 -- ==========================================================================================================
 
 -- Delete any existing versions.
@@ -33,7 +33,7 @@ BEGIN
 				'"has_species":false,'+
 				'"is_assigned":false,'+
 				'"has_unassigned_siblings":false,'+
-				'"name":null,' +
+				'"name":"Unassigned",' +
 				'"parentDistance":1,'+
 				'"rankIndex":'+CAST(tr.rank_index AS VARCHAR(2))+','+
 				'"rankName":"'+tr.rank_name+'",' +
