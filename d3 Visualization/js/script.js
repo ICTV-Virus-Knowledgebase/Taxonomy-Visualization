@@ -1,10 +1,12 @@
 
+
 // Create the ICTV namespace if it doesn't already exist.
 if (!window.ICTV) { window.ICTV = {}; }
 
 window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, releases_, taxonDetailsURL_) {
 
     // Validate input parameters
+ 
     if (!containerSelector_) { throw new Error("Invalid container selector"); }
     const containerSelector = containerSelector_;
 
@@ -28,24 +30,24 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
             textDy: 5
         },
         svg: {
-            height: 2000,
+            height: $(window).height(),
             margin: { 
                 top: 0, //50, 
                 right: 0, //90, 
                 bottom: 0, //50, 
                 left: 0, //90
             },
-            width: 2000
+            width: ($(window).width())*0.68,
         },
-        tooltipOffsetX: 10,
+        tooltipOffsetX: 25,
         tooltipOffsetY: 0,
         xFactor: 0.5, // TODO: this is influencing Y offset, not X
         yFactor: 300,
         yOffset: 0,
         zoom: {
-            scaleFactor: 1.0, //.17,
-            translateX: -200, //-3850,
-            translateY: 50 //-1800
+            scaleFactor: 0.185, //.17,
+            translateX: -($(window).width()*1.8), //-3850,
+            translateY: -($(window).height()*2)//-1800
         }
     }
 
@@ -63,28 +65,42 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
 
 
     // Display all species for the selected taxon.
-    function displaySpecies(parentName, parentRank, parentTaxNodeID) {
+    function displaySpecies(parentName, parentRank, parentTaxNodeID, releases_) {
 
         // Validate the parameters
+       // if (!releases) { throw new Error("Invalid releases in initializeReleaseControl"); }
         if (!parentName || parentName.length < 1) { throw new Error("Error in displaySpecies: Invalid parent name parameter"); }
         if (!parentRank || parentRank.length < 1) { throw new Error("Error in displaySpecies: Invalid parent rank parameter"); }
         if (!parentTaxNodeID || isNaN(parseInt(parentTaxNodeID))) { throw new Error("Error in displaySpecies: Invalid parent taxNodeID parameter"); }
 
         const strTaxNodeID = new String(parentTaxNodeID);
-
         // Get all species associated with the parent.
         const speciesArray = speciesData[strTaxNodeID];
-        if (!speciesArray) { throw new Error(`Invalid species array for taxnodeID ${parentTaxNodeID}`); }
+        
+        // if (!speciesArray) { throw new Error(`Invalid species array for taxnodeID ${parentTaxNodeID}`); }
 
         const speciesPanelEl = document.querySelector(`${containerSelector} .species-panel`);
         if (!speciesPanelEl) { throw new Error("Invalid species panel element"); }
+        // speciesPanelEl.setAttribute("year", releases_)
+        //     speciesPanelEl.addEventListener("change", function(e) {
+        //     displaySpecies(e.target.getAttribute("year"))
+            
+        
+    // })
 
         const nameEl = speciesPanelEl.querySelector(".parent-name");
         if (!nameEl) { throw new Error("Invalid parent name element"); }
-         
-        // Populate the parent name panel.
-        nameEl.innerHTML = `Species of ${parentRank} ${parentName}`;
+        if(speciesArray===null){
+            nameEl.innerHTML = ``;
 
+        }
+        
+        // Populate the parent name panel.
+        else{
+            console.log(speciesArray);
+            if (parentRank==="genus"||parentRank==="subgenus"){
+        nameEl.innerHTML = `Species of ${parentRank} ${parentName}`;
+            }
         const listEl = speciesPanelEl.querySelector(".species-list");
         if (!listEl) { throw new Error("Invalid species list element"); }
         listEl.innerHTML = "";
@@ -105,6 +121,11 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
 
             listEl.appendChild(speciesEl);
         })
+        
+    
+    
+
+        }
     }
 
     // Return the color associated with this rank name and whether or not the node has child nodes.
@@ -146,7 +167,8 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
 
     // Initialize the release control with MSL releases.
     function initializeReleaseControl(releases_) {
-
+        // for(var i=0;i<releases_.length;i++){
+            // console.log(releases_[i].year);
         if (!releases_) { throw new Error("Invalid releases in initializeReleaseControl"); }
 
         const controlEl = document.querySelector(`${containerSelector} .release-panel .release-ctrl`);
@@ -157,29 +179,47 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
 
         // Add an option for each release.
         releases_.forEach(function (release) {
-
             const option = document.createElement("option");
-            option.text = release;
-            option.value = isNaN(parseInt(release.substr(0,2))) ? "" : release;
+            option.text = release.year;
+            option.value = isNaN(parseInt(release.year.substr(0,2))) ? "" : release.year;
             
             controlEl.appendChild(option);
+
+            
         })
 
-        // Add a "change" event handler
+    // Add a "change" event handler
+    
         controlEl.addEventListener("change", function (e) {
             displayReleaseTaxonomy(e.target.value);
+        
         })
+    
+        
+        //  rankCount=releases_[i].rankCount;
+       
+    // }
     }
 
     // Display the taxonomy tree for the release selected by the user.
     async function displayReleaseTaxonomy(release_) {
-
+        //fetching the rankCont
+        for(let i=0;i<releases_.length;i++){
+            if(releases_[i].year==release_){
+                var rankCount=releases_[i].rankCount;
+                break;
+            }
+        }
+        
+        console.log("rankCount : ",rankCount);
         // Validate the release parameter. If the first 2 characters are numeric, we will assume it's valid.
         if (!release_ || isNaN(parseInt(release_.substr(0,2)))) { throw new Error("Invalid release in displayReleaseTaxonomy"); }
 
         // If there's already an SVG element in the taxonomy panel, delete it.
-        let existingSVG = document.querySelector(`${containerSelector} .taxonomy-panel svg`);
+        let existingSVG = document.querySelector(`${containerSelector} .taxonomy-panel svg `);
         if (!!existingSVG) { existingSVG.remove(); }
+        
+        
 
         // Determine the filenames for the non-species and species JSON files.
         const nonSpeciesFilename = `${dataURL}/data/nonSpecies_${release_}.json`;
@@ -187,7 +227,9 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
 
         // Load the species data for this release.
         speciesData = await d3.json(speciesFilename).then(function (s) {
+            
             return s;
+           
         });
         if (!speciesData) { throw new Error(`Invalid species data for release ${release_}`); }
 
@@ -202,7 +244,6 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
             // dmd 02/07/23 Set the width and height available within the SVG.
             const availableHeight = settings.svg.height - settings.svg.margin.left - settings.svg.margin.right;
             const availableWidth = settings.svg.width - settings.svg.margin.top - settings.svg.margin.bottom;
-
             function handleZoom(e) {
                 d3.select(`${containerSelector} svg g`)
                     .attr("transform", e.transform);
@@ -287,7 +328,7 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
                                     data: {
                                         name: "Up",
                                         rankName: "Shift",
-                                        rankIndex: "13"
+                                        rankIndex: rankCount-1
                                     },
                                     page: i == 0 ? l - 1 : i - 1
                                 })
@@ -296,7 +337,7 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
                                     data: {
                                         name: "Down",
                                         rankName: "Shift",
-                                        rankIndex: "13"
+                                        rankIndex: rankCount-1
                                     },
                                     page: i != (l - 1) ? i + 1 : 0,
                                 });
@@ -323,7 +364,7 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
                             d._children.forEach(collapse);
                             d.children = null;
 
-                        } else if (d.data.name === null && (d.data.has_assigned_siblings !== true && d.data.has_unassigned_siblings !== true)) {
+                        } else if (d.data.name === "Unassigned" && (d.data.has_assigned_siblings !== true && d.data.has_unassigned_siblings !== true)) {
                             // No name and it doesn't have assigned or unassigned siblings (so no siblings?).
                             // TODO: the if condition above can be simplified to:
                             //      !d.data.name && !d.data.has_assigned_siblings && !d.data.has_unassigned_siblings
@@ -365,6 +406,17 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
                     var info = treeLayout(ds);
                     var parent = info.descendants(),
                         links = info.descendants().slice(1);
+                        parent.forEach(function (d) {
+                            // console.log(rankCount);
+                            var x = (settings.svg.width/175)
+                             var f= (settings.svg.width*x/(rankCount));
+
+                            // /var g=availableWidth/rankCount;
+                   // var h=d.data.rankIndex*f;
+                    console.log("test",rankCount);
+                            d.x=d.x*4.5;
+                            d.y = d.data.rankIndex*f;
+                        });
 
                     //console.log("parent = ", parent)
 
@@ -378,6 +430,11 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
 
                         console.log(`after: d.x = ${d.x}, d.y = ${d.y}`)
                     });*/
+                    // var f= (1900/4)*4;
+                    // var h=d.data.rankIndex*f;
+
+                    // d.x = d.x*4;
+                    // d.y = d.y*h;
 
                     var children = svg.selectAll('g.node')
                         .data(parent, function (d) {
@@ -409,7 +466,7 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
                             }
                         })
                         .attr("height", function (d) {
-                            if (d.data.name === null) {
+                            if (d.data.name === "Unassigned") {
                                 if (d.data.rankName === "realm" && d.data.taxNodeID !== "legend") {
                                     return "15px";
                                 } else if (d.data.has_assigned_siblings === true && d.data.has_unassigned_siblings === true) {
@@ -431,7 +488,7 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
                     Enter.append('circle')
                         .attr('class', 'node')
                         .attr('r', function (d) {
-                            if (d.data.name !== null) {
+                            if (d.data.name !== "Unassigned") {
                                 return settings.node.radius;
                             } else {
                                 return 0;
@@ -466,24 +523,38 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
                         //.attr("dy", '7')
                         //.attr('dx', '5')
                         .attr("x", function (d, i) {
-                            if (d.data.rankName !== "subgenus") {
+                            if (d.data.rankIndex !== (rankCount-1)) {
                                 return d.children || d._children ? 10 : -10;
-                            } else if (d.data.rankname === "subgenus") {
-                                return d.children || d._children ? 10 : -10;
+                            } else if (d.data.rankIndex === (rankCount-1)) {
+                                return d.children || d._children ? -10 : 10;
                             }
                         })
                         .attr("text-anchor", function (d) {
-                            if (d.data.rankName !== "subgenus") {
+                            if (d.data.rankIndex !== (rankCount-1)) {
                                 return d.children || d._children ? "start" : "end";
                             }
-                            else if (d.data.rankname === "subgenus") {
-                                return d.children || d._children ? "start" : "end";
+                            else if (d.data.rankIndex === (rankCount-1)) {
+                                return d.children || d._children ? "end" : "start";
                             }
                         })
                         .attr("dx", settings.node.textDx)
                         .attr("dy", settings.node.textDy)
+                        .style("font-size", function(d,i){
+                            if(rankCount===3)
+                            return 70;
+                            else if(rankCount===4)
+                            return 55;
+                            else if(rankCount===5)
+                            return 50;
+                            else if (rankCount===10)
+                            return 50;
+                            else 
+                            return 40;
+
+
+                        })
                         .text(function (d) {
-                            if ((d.data.name === null) || d.data.rankName === "tree") {
+                            if ((d.data.name === "Unassigned") || d.data.rankName === "tree") {
                                 if (d.data.taxNodeID === "legend") {
                                     // dmd 02/08/23
                                     // Don't display "species" in the legend.
@@ -503,8 +574,9 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
                         })
                         .on('click', function (e, d) {
                             console.log("in click d = ",d)
-                            if (d.data.has_species === 1) { return displaySpecies(d.data.name, d.data.rankName, d.data.taxNodeID); }
-                            return null;
+                            return displaySpecies(d.data.name, d.data.rankName, d.data.taxNodeID); 
+                         
+                          
                         })
                         .call(getBB);
 
@@ -526,7 +598,7 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
                         .style("stroke", "black")
                         .style("stroke-width", "1px")
                         .attr("width", function (d) {
-                            if (d.data.name === null) {
+                            if (d.data.name === "Unassigned") {
                                 if (d.data.rankName === "realm" && d.data.taxNodeID !== "legend") {
                                     return "15px";
                                 } else if (d.data.has_assigned_siblings === true || d.data.has_unassigned_siblings === true) {
@@ -537,7 +609,7 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
                             }
                         })
                         .attr("height", function (d) {
-                            if (d.data.name === null) {
+                            if (d.data.name === "Unassigned") {
                                 if (d.data.rankName === "realm" && d.data.taxNodeID !== "legend") {
                                     return "15px";
                                 } else if (d.data.has_assigned_siblings === true || d.data.has_unassigned_siblings === true) {
@@ -558,7 +630,7 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
 
                     Update.select('circle.node')
                         .attr('r', function (d) {
-                            if (d.data.name !== null) {
+                            if (d.data.name !== "Unassigned") {
                                 return settings.node.radius;
                             } else {
                                 return 0;
@@ -573,7 +645,7 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
                         })
                         .attr('cursor', 'pointer')
                         .text(function (d, i) {
-                            if ((d.data.name === null) || d.data.rankName === "tree") {
+                            if ((d.data.name === "Unassigned") || d.data.rankName === "tree") {
                                 if (d.data.taxNodeID === "legend") {
                                     return d.data.rankName;
                                 } else if (d.data.rankName === 'realm' || d.data.has_unassigned_siblings === true) {
@@ -611,6 +683,41 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
 
                             findParent(d);
                         }); */
+                        // Update.select('text')
+
+                        // .attr("transform", function (d, i) {
+                        //     if ((d.data.name === null) || d.data.rankName === "tree") {
+                        //         if (d.data.taxNodeID === "legend" && d.data.rankName !== "subgenus") {
+                        //             return "rotate(-45 150,-100)";
+                        //         } else if (d.data.taxNodeID === "legend" && d.data.rankName === "subgenus") {
+                        //             return "rotate(-45 150, -100) ";
+                        //         } else {
+                        //             return "";
+                        //         }
+    
+                        //     }
+                        // })
+    
+                        
+    
+    
+                        // .style("fill", function (d) {
+                       
+                            
+                        //     if (d.data.taxNodeID !== 'legend') {
+                        //         if(selected==d.data.name ){
+                        //         return d._children ? "#000000" : "#006CB5"
+                        //     }
+                        //     else{
+                        //         return "#000000"
+                        //     }
+                        // }
+                        //     findParent(d)
+    
+                        // })
+    
+    
+                        // .attr('cursor', 'pointer')
 
                     Update.select("text.node-text") 
                         .attr('cursor', 'pointer')
@@ -624,21 +731,18 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
 
                     // Transform 
                     Update.select("text.legend-node-text")
-                        /* dmd 02/07/23 I moved this functionality to the stylesheet.
                         .attr("transform", function (d, i) {
-                            if ((d.data.name === null) || d.data.rankName === "tree") {
-                                return "rotate(-45 150,-100)";*/
-
-                                /*if (d.data.taxNodeID === "legend" && d.data.rankName !== "subgenus") {
-                                    return "rotate(-45 150,-100)";
-                                } else if (d.data.taxNodeID === "legend" && d.data.rankName === "subgenus") {
-                                    return "rotate(-45 150, -100) ";
-                                } else {
-                                    return "";
+                            if ((d.data.taxNodeID === "legend") ) {
+                               // return "rotate(-45 150,-100)";
+                                if (d.data.rankIndex !== (rankCount-1)) {
+                                    return  "rotate(-45 100,-100)";
                                 }
-                                */
-                        /*    }
-                        })*/
+                                else if (d.data.rankIndex === (rankCount-1)) {
+                                    return "rotate(-45 0,-300)";
+                                }
+                                
+                            }
+                        })
                         .style("fill", function (d) {
                             findParent(d)
                         })
@@ -664,7 +768,7 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
                     var linkEnter = link.enter().insert('path', "g")
                         .attr("class", "link")
                         .attr('d', function (d) {
-                            if (((d.data.rankName === "subgenus" && d.data.name == null) || d.data.taxNodeID === "legend") && d.data.name === null) {
+                            if (((d.data.rankName === "subgenus" && d.data.name == "Unassigned") || d.data.taxNodeID === "legend") && d.data.name === "Unassigned") {
                                 return diagonal(0, 0);
                             }
                             var pos = { x: source.x0, y: source.y0 }
@@ -674,7 +778,7 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
                         .style("fill", "none")
                         .style("stroke", "#ccc")
                         .style("display", function (d) {
-                            if (d.depth === 1 || (d.data.rankIndex === 14 && d.data.name == null) || d.data.taxNodeID === "legend") { //Is top link
+                            if (d.depth === 1 || (d.data.has_species===0 && d.data.name == "Unassigned" &&d.data.children===null) || d.data.taxNodeID === "legend") { //Is top link
                                 return 'none';
                             }
                         });
@@ -758,19 +862,24 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
                         if (d.data.taxNodeID !== "legend" && d.data.rankName !== "tree") {
 
                             // dmd 01/31/23 Replaced "body" with containerSelector.
-                            d3.select(containerSelector).selectAll('div.tooltip').remove();
+                            d3.select(containerSelector).selectAll('div.tooltip')
+                            .remove();
                             
                             // dmd 01/31/23 Replaced "body" with containerSelector, replaced "event" with "e".
                             var div = d3.select(containerSelector).append("div")
+                                // .transition()
+                                // .delay(1000)
                                 .attr("class", "tooltip")
+                                
                                 .style("opacity", 1)
-                                .style("left", `${e.pageX + settings.tooltipOffsetX}px`)
-                                .style("top", `${e.pageY + settings.tooltipOffsetY}px`)
-                                .html(`<table style='font-size: 12px; font-family: sans-serif;'>
-                                    <tr><td>Rank Name: </td><td>${d.data.rankName}</td></tr>
-                                    <tr><td>Child count: </td><td>${c}</td></tr>
-                                    <a href="${taxonDetailsURL}?taxnode_id=${d.data.taxNodeID} target="_blank">${d.data.name}</a>
-                                    </table>`
+                                .style("left", (e.pageX + settings.tooltipOffsetX)+ "px")
+                                .style("top", (e.pageY + settings.tooltipOffsetY)+"px")
+                                .html(
+                                    "<table style='font-size: 12px; font-family: sans-serif;' >" +
+                                    "<tr><td>Rank Name: </td><td>" + d.data.rankName + "</td></tr>" +
+                                    "<tr><td>Child count: </td><td>" + c + "</td></tr>" +
+                                    '<a href="https://ictv.global/taxonomy/taxondetails?taxnode_id='  + d.data.taxNodeID + '" target=_blank>' + d.data.name + "</a>" +
+                                    "</table>"
                                 );
                         }
                     }
@@ -785,11 +894,11 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
                         // dmd 01/31/23 Replaced "body" with containerSelector
                         // dmd 02/08/23 Removed the transition delay
                         //d3.select(containerSelector).selectAll('div.tooltip').transition().remove();
-                        d3.select(containerSelector).selectAll('div.tooltip').transition().delay(750).remove();
+                        d3.select(containerSelector).selectAll('div.tooltip').transition().delay(1000).remove();
                     }
                 }
             }
-
+ 
 
             /*
             function add(e, d) {
@@ -850,3 +959,4 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
         });
     }
 }
+
