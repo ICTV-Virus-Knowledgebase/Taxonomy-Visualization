@@ -540,18 +540,10 @@ window.ICTV.d3TaxonomyVisualization = function(containerSelector_, dataURL_, rel
                         .attr("dx", settings.node.textDx)
                         .attr("dy", settings.node.textDy)
                         .style("font-size", function(d,i){
-                            if(rankCount===3)
-                            return 70;
-                            else if(rankCount===4)
-                            return 55;
-                            else if(rankCount===5)
-                            return 50;
-                            else if (rankCount===10)
-                            return 50;
+                            if(rankCount<=10)
+                            return 60;
                             else 
                             return 40;
-
-
                         })
                         .text(function (d) {
                             if ((d.data.name === "Unassigned") || d.data.rankName === "tree") {
