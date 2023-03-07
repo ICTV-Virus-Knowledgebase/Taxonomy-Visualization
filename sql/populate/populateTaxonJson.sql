@@ -58,6 +58,31 @@ BEGIN
 	WHERE tj.tree_id = @treeID
 
 
+    -- Get the rank index of "species"
+    DECLARE @speciesRankIndex AS INT = (
+        SELECT tr.rank_index 
+        FROM taxon_rank tr
+        WHERE tr.tree_id = @treeID
+        AND tr.rank_name = 'species'
+    )
+
+    -- Populate the "has species" column for all ghost nodes.
+    UPDATE ghostNode
+    SET has_species = CASE
+        WHEN 0 < (
+            -- The number of species that are immediate children of the ghost node.
+            SELECT COUNT(*)
+            FROM taxon_json ctj
+            WHERE ctj.parent_id = ghostNode.id
+            AND ctj.rank_index = @speciesRankIndex
+            AND ctj.tree_id = @treeID
+        ) THEN 1 ELSE 0
+    END
+    FROM taxon_json ghostNode
+    WHERE ghostNode.tree_id = @treeID
+    AND ghostNode.is_ghost_node = 1
+
+
 	-- Populate the JSON column from the bottom to the top of the tree.
 	EXEC dbo.initializeJsonColumn @treeID = @treeID
 
