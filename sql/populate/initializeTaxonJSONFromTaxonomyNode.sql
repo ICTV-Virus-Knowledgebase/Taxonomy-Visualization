@@ -16,6 +16,7 @@ IF OBJECT_ID('dbo.initializeTaxonJSONFromTaxonomyNode') IS NOT NULL
 GO
 
 CREATE PROCEDURE dbo.initializeTaxonJSONFromTaxonomyNode
+    @speciesRankIndex AS INT,
 	@treeID AS INT
 AS
 BEGIN
@@ -61,7 +62,7 @@ BEGIN
 			has_species = CASE
 				WHEN 0 < (
 					SELECT COUNT(*)
-					FROM taxonomy_node species
+					FROM [ICTVonline38].dbo.taxonomy_node species
 					WHERE species.parent_id = tn.taxnode_id
 					AND species.level_id = 600
 					AND species.tree_id = @treeID
@@ -73,12 +74,12 @@ BEGIN
 			tn.taxnode_id,
 			tn.tree_id
 
-		FROM taxonomy_node tn
+		FROM [ICTVonline38].dbo.taxonomy_node tn
 		JOIN taxon_rank tr ON (
 			tr.level_id = tn.level_id
 			AND tr.tree_id = @treeID
 		)
-		LEFT JOIN taxonomy_node ptn ON (
+		LEFT JOIN [ICTVonline38].dbo.taxonomy_node ptn ON (
 			ptn.taxnode_id = tn.parent_id
 			AND ptn.tree_id = @treeID
 		)
@@ -101,4 +102,14 @@ BEGIN
 		AND parent_tj.tree_id = tj.tree_id
 	)
 
+
+    -- dmd 031423
+    -- Populate the parent ID of all species whose parent has a rank index of at 
+    -- least 2 less than the species rank index.
+    UPDATE species
+    SET species.parent_id = parent.id
+    FROM taxon_json species
+    JOIN taxon_json parent ON parent.taxnode_id = species.parent_taxnode_id
+    WHERE species.rank_index = @speciesRankIndex
+    AND parent.rank_index < (@speciesRankIndex - 1)
 END

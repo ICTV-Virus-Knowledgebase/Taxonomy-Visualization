@@ -25,12 +25,27 @@ BEGIN
 	-- Delete any existing nodes associated with the tree ID.
 	DELETE FROM taxon_json WHERE tree_id = @treeID
 
+    --==========================================================================================================
+    -- Get the rank index of "species".
+    --==========================================================================================================
+    DECLARE @speciesRankIndex AS INT = (
+        SELECT TOP 1 rank_index
+        FROM taxon_rank
+        WHERE rank_name = 'species'
+        AND tree_id = @treeID
+    )
+
 	-- Create taxon_json records for all taxonomy nodes with the specified tree ID. After all have been created, 
 	-- populate the parent ID column for these records.
-	EXEC dbo.initializeTaxonJSONFromTaxonomyNode @treeID = @treeID
+	EXEC dbo.initializeTaxonJSONFromTaxonomyNode
+        @speciesRankIndex = @speciesRankIndex,
+        @treeID = @treeID
 
+    
 	-- Create intermediate and parent ghost (hidden/unassigned) nodes.
-	EXEC dbo.createGhostNodes @treeID = @treeID
+	EXEC dbo.createGhostNodes 
+        @speciesRankIndex = @speciesRankIndex,
+        @treeID = @treeID
 
 	-- Populate the "has_assigned_siblings" and "has_unassigned_siblings" columns.
 	UPDATE tj
@@ -57,15 +72,6 @@ BEGIN
 	FROM taxon_json tj
 	WHERE tj.tree_id = @treeID
 
-
-    -- Get the rank index of "species"
-    DECLARE @speciesRankIndex AS INT = (
-        SELECT tr.rank_index 
-        FROM taxon_rank tr
-        WHERE tr.tree_id = @treeID
-        AND tr.rank_name = 'species'
-    )
-
     -- Populate the "has species" column for all ghost nodes.
     UPDATE ghostNode
     SET has_species = CASE
@@ -84,7 +90,9 @@ BEGIN
 
 
 	-- Populate the JSON column from the bottom to the top of the tree.
-	EXEC dbo.initializeJsonColumn @treeID = @treeID
+	EXEC dbo.initializeJsonColumn
+        @speciesRankIndex = @speciesRankIndex,
+        @treeID = @treeID
 
 
 	/*

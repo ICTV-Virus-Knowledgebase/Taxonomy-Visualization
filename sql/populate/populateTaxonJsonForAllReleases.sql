@@ -6,7 +6,7 @@ DECLARE @treeID AS INT
 DECLARE release_cursor CURSOR FORWARD_ONLY FOR
 
 	SELECT tree_id 
-	FROM taxonomy_toc 
+	FROM [ICTVonline38].dbo.taxonomy_toc 
 	WHERE msl_release_num IS NOT NULL
 	ORDER BY tree_id
 

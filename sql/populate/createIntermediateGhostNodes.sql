@@ -7,7 +7,7 @@ GO
 -- Author: don dempsey
 -- Created on: 09/19/22
 -- Description: Create intermediate ghost nodes for a taxon and its immediate children in the taxon_json table.
--- Updated: 
+-- Updated: dmd 03/09/23 Added species rank index parameter which is used to limit max child rank index.
 -- ===================================================================================================================
 
 -- Delete any existing versions.
@@ -20,6 +20,7 @@ CREATE PROCEDURE dbo.createIntermediateGhostNodes
 	@parentID AS INT,
 	@parentRankIndex AS INT,
 	@parentTaxnodeID AS INT,
+    @speciesRankIndex AS INT,
 	@treeID AS INT
 
 AS
@@ -39,6 +40,7 @@ BEGIN
 			FROM taxon_json tj
 			WHERE tj.parent_taxnode_id = @parentTaxnodeID
 			AND tj.is_ghost_node = 0
+            AND tj.rank_index < @speciesRankIndex
 
 			-- If the node is immediately below the parent node, there's no need for an intermediate ghost node.
 			AND tj.rank_index > @parentRankIndex + 1 

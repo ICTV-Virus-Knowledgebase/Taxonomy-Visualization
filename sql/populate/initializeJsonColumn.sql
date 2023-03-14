@@ -16,20 +16,11 @@ IF OBJECT_ID('dbo.initializeJsonColumn') IS NOT NULL
 GO
 
 CREATE PROCEDURE dbo.initializeJsonColumn
+    @speciesRankIndex AS INT,
 	@treeID AS INT
 AS
 BEGIN
 	SET XACT_ABORT, NOCOUNT ON
-
-	--==========================================================================================================
-	-- Get the rank index of "species".
-	--==========================================================================================================
-	DECLARE @speciesRankIndex AS INT = (
-		SELECT TOP 1 rank_index
-		FROM taxon_rank
-		WHERE rank_name = 'species'
-		AND tree_id = @treeID
-	)
 
 	--==========================================================================================================
 	-- Update the JSON column of every taxon_json record.
@@ -63,7 +54,7 @@ BEGIN
 		tr.rank_index = tj.rank_index
 		AND tr.tree_id = @treeID
 	)
-	LEFT JOIN taxonomy_node tn ON tn.taxnode_id = tj.taxnode_id
+	LEFT JOIN [ICTVonline38].dbo.taxonomy_node tn ON tn.taxnode_id = tj.taxnode_id
 	WHERE tj.tree_id = @treeID
 
 	
@@ -111,7 +102,7 @@ BEGIN
 					END +
 				'}'
 				FROM taxon_json tj
-				LEFT JOIN taxonomy_node tn ON tn.taxnode_id = tj.taxnode_id
+				LEFT JOIN [ICTVonline38].dbo.taxonomy_node tn ON tn.taxnode_id = tj.taxnode_id
 				WHERE tj.parent_id = @id
 				AND tj.tree_id = @treeID
 				AND tj.rank_index < @speciesRankIndex
@@ -137,7 +128,7 @@ BEGIN
 					ELSE '{'+tj.json+'"children":null}'
 				END
 				FROM taxon_json tj
-				JOIN taxonomy_node tn ON (
+				JOIN [ICTVonline38].dbo.taxonomy_node tn ON (
 					tn.taxnode_id = tj.taxnode_id
 					AND tn.tree_id = tj.tree_id
 				)
