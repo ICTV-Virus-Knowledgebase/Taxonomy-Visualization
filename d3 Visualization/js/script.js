@@ -1001,7 +1001,7 @@ window.ICTV.d3TaxonomyVisualization = function (
           Update.select("text.legend-node-text")
             .attr("transform", function (d, i) {
               if (d.data.taxNodeID === "legend") {
-                return "rotate(-45 170,-110)";
+                return "rotate(-45 0,-110)";
                 // if (d.data.rankIndex !== (rankCount-1)) {
                 //     return  "rotate(-45 100,-100)";
                 // }
