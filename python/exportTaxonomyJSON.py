@@ -35,11 +35,12 @@ def getMslReleases(apiDB_, dbServer_, taxonomyDB_):
 
             # Get the year from the tree ID.
             year = treeID[0:4]
+            formattedYear = year if treeID[4] == "0" else f"{year}.{treeID[4]}"
 
             # Create the command line text to run sqlcmd for non-species taxa.
             nonSpeciesCMD = (f"sqlcmd -S {dbServer_} "
                 f"-Q \"EXEC [{apiDB_}].dbo.exportNonSpeciesTaxonomyJSON @treeID = {treeID}\" "
-                f"-o \"JSON\\nonSpecies_{year}.json\" "
+                f"-o \"JSON\\nonSpecies_{formattedYear}.json\" "
                 "-y 0 ")
 
             # Run the command
@@ -48,7 +49,7 @@ def getMslReleases(apiDB_, dbServer_, taxonomyDB_):
              # Create the command line text to run sqlcmd for species taxa.
             speciesCMD = (f"sqlcmd -S {dbServer_} "
                 f"-Q \"EXEC [{apiDB_}].dbo.exportSpeciesTaxonomyJSON @treeID = {treeID}\" "
-                f"-o \"JSON\\species_{year}.json\" "
+                f"-o \"JSON\\species_{formattedYear}.json\" "
                 "-y 0 ")
 
             # Run the command
