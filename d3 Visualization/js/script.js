@@ -38,17 +38,17 @@ window.ICTV.d3TaxonomyVisualization = function (
       radius: 13,
       strokeWidth: 3,
       textDx: 25,
-      textDy: 10,
+      textDy: 25,
     },
     svg: {
-      height: jQuery(window).height()*0.8,
+      height: $(window).height() * 0.8,
       margin: {
         top: 0, //50,
         right: 0, //90,
         bottom: 0, //50,
         left: 0, //90
       },
-      width: jQuery(window).width(),
+      width: $(window).width(),
     },
     tooltipOffsetX: 25,
     tooltipOffsetY: 0,
@@ -57,42 +57,41 @@ window.ICTV.d3TaxonomyVisualization = function (
     yOffset: 0,
     zoom: {
       scaleFactor: 0.19, //.17,
-      translateX: -(jQuery(window).width() * 2.5), //-3850,
-      translateY: -(jQuery(window).height() * 0.45), //-1800
+      translateX: -($(window).width() * 2.5), //-3850,
+      translateY: -($(window).height() * 0.45), //-1800
     },
   };
   var selected;
   var num_flag = false;
   var num;
   var check;
-  var toolTip=false;
+  var toolTip = false;
   // var dx=0;
-  var Slider=false;
+  var Slider = false;
   var arr = [];
   var temp = 0;
   var rankYear = 0;
   var Flag = true;
   var max = 0;
   var fs = 0;
-  var slider = d3.select(".taxonomy-panel").append("input")
-  .style("display","None")
-  .attr("class","slider")
-  .attr("type", "range")
-  .attr("min", 4)
-  .attr("max", 8)
-  .attr("value", 4)
-      
-  var Text=d3.select(".taxonomy-panel")
-  .append("h3")
-  .text("Font-Slider").style("display","None");
+  //declaring the slider
+  var slider = d3
+    .select(".taxonomy-panel")
+    .append("input")
+    .style("display", "None")
+    .attr("class", "slider")
+    .attr("type", "range")
+    .attr("min", 4)
+    .attr("max", 8)
+    .attr("value", 4);
 
-  // var slider_zoom = d3.select(".taxonomy-panel").append("input")
-  //     .attr("type", "range")
-  //     .attr("min", 1)
-  //     .attr("max", 10)
-  //     .attr("value", 5)
-  //     .style("display","None");
-  
+  var Text = d3
+    .select(".taxonomy-panel")
+    .append("h4")
+    .attr("class", "text_slider")
+    .text("Font-Slider")
+    .style("display", "None");
+
   // This will be populated with a release's species data.
   let speciesData = null;
   // Initialize the release control with MSL releases.
@@ -142,7 +141,7 @@ window.ICTV.d3TaxonomyVisualization = function (
     // Populate the parent name panel.
     console.log(speciesArray);
     if (hasSpecies) {
-      nameEl.innerHTML = `Species of ${parentRank} ${parentName}`;
+      nameEl.innerHTML = `Species of ${parentRank} <em>${parentName}<\em>`;
     } else {
       nameEl.innerHTML = "";
     }
@@ -230,16 +229,14 @@ window.ICTV.d3TaxonomyVisualization = function (
     if (!controlEl) {
       throw new Error("Invalid release control");
     }
-    slider.attr("value",4);
-
     // Clear any existing options
     controlEl.innerHTML = null;
     // speciesPanelEl.innerHTML = null;
     // Add an option for each release.
     releases_.forEach(function (release) {
       const option = document.createElement("option");
-      option.text = !release.label ? release.year : release.label;
-      option.value = isNaN(parseFloat(release.year))
+      option.text = release.year;
+      option.value = isNaN(parseInt(release.year.substr(0, 2)))
         ? "2022"
         : release.year;
       controlEl.appendChild(option);
@@ -259,7 +256,6 @@ window.ICTV.d3TaxonomyVisualization = function (
     //  rankCount=releases_[i].rankCount;
 
     // }
-
   }
 
   // Display the taxonomy tree for the release selected by the user.
@@ -391,7 +387,6 @@ window.ICTV.d3TaxonomyVisualization = function (
         d.fixed = false;
       }
 
-
       // TODO: Consider renaming "ds" to "root"
       const ds = d3.hierarchy(data, function (d) {
         if (d.children === null) {
@@ -428,24 +423,23 @@ window.ICTV.d3TaxonomyVisualization = function (
         }
       });
 
-      // Create and populate the tree structure.
-      slider
-      .on('input', function(e) {
-      const fontSize = e.target.value;
-      // console.log("FONT_SIZE",(e.target.value/2));
-      const r=(e.target.value)
-      console.log("FONT",fontSize);
-      font="";
-      font=fontSize + 'rem';
-      console.log("FOnt",font);
-      d3.selectAll("text")
-      .style("font-size", font );
+      // changing the font on change of slider
+      slider.on("input", function (e) {
+        const fontSize = e.target.value;
+        // console.log("FONT_SIZE",(e.target.value/2));
+        const r = e.target.value;
+        console.log("FONT", fontSize);
+        font = "";
+        font = fontSize + "rem";
+        console.log("FOnt", font);
+        d3.selectAll("text").style("font-size", font);
+        getBBox(ds);
       });
+      // Create and populate the tree structure.
       createTree(ds);
-      slider.style("display","block");
-      Text.style("display","block");
-
-    
+      //displaying the slider only if a release is selected
+      slider.style("display", "block");
+      Text.style("display", "block");
 
       // TODO: this needs a more informative name.
       var i = 0;
@@ -473,17 +467,6 @@ window.ICTV.d3TaxonomyVisualization = function (
           .call(zoom.scaleBy, settings.zoom.scaleFactor)
           .call(zoom)
           .on("dblclick.zoom", null);
-          //  slider_zoom.on("input", function() {
-          //       // get the current value of the sliders
-          //       var value = this.value;
-          //       // set the scaling factor of the zoom behavior
-          //       var scaleFactor = value*0.2;
-          //       console.log("val : ",value);
-          //       // let svg=  d3.select(`${containerSelector} .taxonomy-panel svg`);
-          //        zoom.scaleBy(svg_zoom,scaleFactor);
-    
-          //   });
-
         // Use d3 to generate the tree layout/structure.
         const treeLayout = d3.tree().size([availableHeight, availableWidth]);
 
@@ -635,52 +618,9 @@ window.ICTV.d3TaxonomyVisualization = function (
               console.log(num);
             }
 
-            // if(max>0){
-            //   dx=((settings.svg.height)/(rankCount));
-            //   console.log("DX",dx)
-            // }
-
-            // if (Flag == true) {
-            //    if(d.data.taxNodeID==="legend"){
-            //     d.x=d.x*h*2
-            //     d.y=d.depth*w;
-            //  }
-            //    else{
-
             d.x = d.x * h;
             d.y = d.depth * w;
-            // }
-            // }
-
-            // else {
-            //   if (d.data.taxNodeID === "legend") {
-            //     d.x = d.x - d.x * 3;
-            //     d.y = d.depth * 180;
-            //   } else {
-            //     d.x = d.x * 2;
-            //     d.y = d.depth * 180;
-            //   }
-            // }
-            // }
           });
-
-          //console.log("parent = ", parent)
-
-          /*
-                    // TODO: d.x and d.y are being exchanged somewhere after this forEach! 
-                    parent.forEach(function (d) {
-                        console.log(`before: d.x = ${d.x}, d.y = ${d.y}`)
-
-                        d.x = d.x * settings.xFactor;
-                        d.y = (d.data.rankIndex * settings.yFactor) + settings.yOffset;
-
-                        console.log(`after: d.x = ${d.x}, d.y = ${d.y}`)
-                    });*/
-          // var f= (1900/4)*4;
-          // var h=d.data.rankIndex*f;
-
-          // d.x = d.x*4;
-          // d.y = d.y*h;
 
           var children = svg.selectAll("g.node").data(parent, function (d) {
             return d.id || (d.id = ++i);
@@ -727,12 +667,12 @@ window.ICTV.d3TaxonomyVisualization = function (
                   d.data.rankName === "realm" &&
                   d.data.taxNodeID !== "legend"
                 ) {
-                  return "15px";
+                  return "20px";
                 } else if (
                   d.data.has_assigned_siblings === true &&
                   d.data.has_unassigned_siblings === true
                 ) {
-                  return "15px";
+                  return "20px";
                 } else {
                   return "0px";
                 }
@@ -781,6 +721,10 @@ window.ICTV.d3TaxonomyVisualization = function (
           }
 
           Enter.append("text")
+            .attr("dy", ".35rem")
+            .attr("x", function (d) {
+              return d.children ? -13 : 13;
+            })
             .attr("class", function (d) {
               return d.data.taxNodeID === "legend"
                 ? "legend-node-text"
@@ -792,11 +736,8 @@ window.ICTV.d3TaxonomyVisualization = function (
             .attr("x", function (d, i) {
               if (d.data.rankIndex === 0) {
                 return d.children || d._children ? 10 : -10;
-              } else if (
-                d.data.has_species !== 0 &&
-                d.data.taxNodeID !== "legend"
-              ) {
-                return d.children || d._children ? -10 : 10;
+              } else if (d.data.taxNodeID !== "legend") {
+                return d.children || d._children ? 0 : 10;
               }
             })
             .attr("text-anchor", function (d) {
@@ -805,14 +746,14 @@ window.ICTV.d3TaxonomyVisualization = function (
               } else if (
                 d.data.has_species !== 0 &&
                 d.data.taxNodeID !== "legend" &&
-                d.data.rankName === rankCount - 1
+                d.data.rankIndex === rankCount - 1
               ) {
                 return d.children || d._children ? "end" : "start";
               }
             })
+            .style("font-size", "4rem")
             .attr("dx", settings.node.textDx)
             .attr("dy", settings.node.textDy)
-            .style("font-size","4rem")
             .text(function (d) {
               if (d.data.name === "Unassigned" || d.data.rankName === "tree") {
                 if (d.data.taxNodeID === "legend") {
@@ -837,12 +778,8 @@ window.ICTV.d3TaxonomyVisualization = function (
             .attr("fill", function (d) {
               return "#000000";
             })
-            // .on('click' , function(e,d){
-            //     d3.select(containerSelector).selectAll('div.tooltip').style("display", "none");
-
-            // })
             .on("click", function (e, d) {
-              slider.attr("value",4);
+              slider.attr("value", 4);
               console.log("in click d = ", d, num);
               //  check=rankYear;
               return displaySpecies(
@@ -854,6 +791,8 @@ window.ICTV.d3TaxonomyVisualization = function (
                 release_
               );
             })
+            .attr("dx", settings.node.textDx)
+            .attr("dy", settings.node.textDy)
             .call(getBB);
           Enter.insert("rect", "text")
             .attr("x", function (d) {
@@ -868,7 +807,9 @@ window.ICTV.d3TaxonomyVisualization = function (
             .attr("height", function (d) {
               return d.bbox.height;
             })
-            .style("fill", "white");
+            .style("fill", "white")
+            .attr("dx", settings.node.textDx)
+            .attr("dy", settings.node.textDy);
 
           var Update = Enter.merge(children);
           Update.transition()
@@ -886,12 +827,12 @@ window.ICTV.d3TaxonomyVisualization = function (
                   d.data.rankName === "realm" &&
                   d.data.taxNodeID !== "legend"
                 ) {
-                  return "15px";
+                  return "20px";
                 } else if (
                   d.data.has_assigned_siblings === true ||
                   d.data.has_unassigned_siblings === true
                 ) {
-                  return "15px";
+                  return "20px";
                 } else {
                   return "0px";
                 }
@@ -903,17 +844,19 @@ window.ICTV.d3TaxonomyVisualization = function (
                   d.data.rankName === "realm" &&
                   d.data.taxNodeID !== "legend"
                 ) {
-                  return "15px";
+                  return "20px";
                 } else if (
                   d.data.has_assigned_siblings === true ||
                   d.data.has_unassigned_siblings === true
                 ) {
-                  return "15px";
+                  return "20px";
                 } else {
                   return "0px";
                 }
               }
             })
+            .attr("dx", settings.node.textDx)
+            .attr("dy", settings.node.textDy)
             .style("fill", function (d) {
               let color = getRankColor(!!d._children, d.data.rankName);
               if (!!color) {
@@ -966,8 +909,6 @@ window.ICTV.d3TaxonomyVisualization = function (
 
               return "#000000";
             });
-     
-
 
           // TODO: isn't this redundant?
           /*Update.select('circle.node')
@@ -1014,7 +955,6 @@ window.ICTV.d3TaxonomyVisualization = function (
 
           // })
           var font;
-         
 
           // .attr('cursor', 'pointer')
 
@@ -1027,25 +967,17 @@ window.ICTV.d3TaxonomyVisualization = function (
                 return "#000000";
               }
             })
-            .style("font-size",(slider.property("value")+"rem"));
-           ;
-
+            .style("font-size", slider.property("value") + "rem");
           // Transform
           Update.select("text.legend-node-text")
             .attr("transform", function (d, i) {
               if (d.data.taxNodeID === "legend") {
                 return "rotate(-45 0,-110)";
-                // if (d.data.rankIndex !== (rankCount-1)) {
-                //     return  "rotate(-45 100,-100)";
-                // }
-                // else if (d.data.rankIndex === (rankCount-1)) {
-                //     return "rotate(-45 0,-300)";
-                // }
               }
             })
             .style("fill", function (d) {
               findParent(d);
-            });      
+            });
 
           var Exit = children
             .exit()
@@ -1182,18 +1114,18 @@ window.ICTV.d3TaxonomyVisualization = function (
             }
           }
           var div = d3
-          .select(containerSelector)
-          .append("div")
-          // .transition()
-          // .delay(1000)
-          .attr("class", "tooltip")
+            .select(containerSelector)
+            .append("div")
+            // .transition()
+            // .delay(1000)
+            .attr("class", "tooltip");
 
           function showTooltip(e, d) {
             var c = d.data.child_counts;
             if (d.data.taxNodeID !== "legend" && d.data.rankName !== "tree") {
               // dmd 01/31/23 Replaced "body" with containerSelector.
               d3.select(containerSelector).selectAll("div.tooltip").remove();
-              toolTip=true;
+              toolTip = true;
               // dmd 01/31/23 Replaced "body" with containerSelector, replaced "event" with "e".
               var div = d3
                 .select(containerSelector)
@@ -1234,19 +1166,20 @@ window.ICTV.d3TaxonomyVisualization = function (
             // dmd 02/08/23 Removed the transition delay
             //d3.select(containerSelector).selectAll('div.tooltip').transition().remove();
             // d3.select(containerSelector).selectAll("div.tooltip")
-           
+
             // if(toolTip===true){
             //   d3.select(containerSelector).selectAll("div.tooltip")
-              
+
             //   .style("display", "none");
             // }
-            toolTip=false;
-            setTimeout(function() {
+            toolTip = false;
+            setTimeout(function () {
               if (!toolTip) {
-                d3.select(containerSelector).selectAll("div.tooltip").style("display", "none");
+                d3.select(containerSelector)
+                  .selectAll("div.tooltip")
+                  .style("display", "none");
               }
-            }, 1000);
-         
+            }, 2000);
           }
         }
       }
