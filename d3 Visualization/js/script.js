@@ -41,14 +41,14 @@ window.ICTV.d3TaxonomyVisualization = function (
       textDy: 25,
     },
     svg: {
-      height: $(window).height() * 0.8,
+      height: jQuery(window).height() * 0.8,
       margin: {
         top: 0, //50,
         right: 0, //90,
         bottom: 0, //50,
         left: 0, //90
       },
-      width: $(window).width(),
+      width: jQuery(window).width(),
     },
     tooltipOffsetX: 25,
     tooltipOffsetY: 0,
@@ -57,8 +57,8 @@ window.ICTV.d3TaxonomyVisualization = function (
     yOffset: 0,
     zoom: {
       scaleFactor: 0.19, //.17,
-      translateX: -($(window).width() * 2.5), //-3850,
-      translateY: -($(window).height() * 0.45), //-1800
+      translateX: -(jQuery(window).width() * 2.5), //-3850,
+      translateY: -(jQuery(window).height() * 0.45), //-1800
     },
   };
   var selected;
@@ -235,8 +235,8 @@ window.ICTV.d3TaxonomyVisualization = function (
     // Add an option for each release.
     releases_.forEach(function (release) {
       const option = document.createElement("option");
-      option.text = release.year;
-      option.value = isNaN(parseInt(release.year.substr(0, 2)))
+      option.text = !release.label ? release.year : release.label;
+      option.value = isNaN(parseFloat(release.year))
         ? "2022"
         : release.year;
       controlEl.appendChild(option);
@@ -1070,9 +1070,9 @@ window.ICTV.d3TaxonomyVisualization = function (
               return null;
 
             path = `M ${s.y} ${s.x}
-                                C ${(s.y + t.y) / 2} ${s.x},
-                                ${(s.y + t.y) / 2} ${t.x},
-                                ${t.y} ${t.x}`;
+                    C ${(s.y + t.y) / 2} ${s.x},
+                    ${(s.y + t.y) / 2} ${t.x},
+                    ${t.y} ${t.x}`;
 
             return path;
           }
@@ -1144,9 +1144,7 @@ window.ICTV.d3TaxonomyVisualization = function (
                     "<tr><td>Child count: </td><td>" +
                     c +
                     "</td></tr>" +
-                    '<a href="https://ictv.global/taxonomy/taxondetails?taxnode_id=' +
-                    d.data.taxNodeID +
-                    '" target=_blank>' +
+                    `<a href="${taxonDetailsURL}?taxnode_id=${d.data.taxNodeID}" target=_blank>` +
                     d.data.name +
                     "</a>" +
                     "</table>"
