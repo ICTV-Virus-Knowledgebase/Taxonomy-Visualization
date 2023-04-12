@@ -67,35 +67,30 @@ window.ICTV.d3TaxonomyVisualization = function (
   var check;
   var toolTip = false;
   // var dx=0;
-  var Slider = false;
+  //var Slider = false;
   var arr = [];
   var temp = 0;
   var rankYear = 0;
   var Flag = true;
   var max = 0;
   var fs = 0;
-  //declaring the slider
-  var slider = d3
-    .select(".taxonomy-panel")
-    .append("input")
-    .style("display", "None")
-    .attr("class", "slider")
-    .attr("type", "range")
-    .attr("min", 4)
-    .attr("max", 8)
-    .attr("value", 4);
 
-  var Text = d3
-    .select(".taxonomy-panel")
-    .append("h4")
-    .attr("class", "text_slider")
-    .text("Font-Slider")
-    .style("display", "None");
-
+  // The DOM Element for the font size panel and slider (these are assigned in "iniitializeFontSizePanel").
+  let fontSizePanelEl = null;
+  let fontSliderEl = null;
+  
   // This will be populated with a release's species data.
   let speciesData = null;
+
+  // Initialize the font size slider and its label.
+  initializeFontSizePanel();
+  
   // Initialize the release control with MSL releases.
   initializeReleaseControl(releases);
+
+  
+
+
   function displaySpecies(
     parentName,
     parentRank,
@@ -208,6 +203,49 @@ window.ICTV.d3TaxonomyVisualization = function (
     }
   }
 
+  // Initialize the font size slider and its label.
+  function initializeFontSizePanel() {
+
+    // Get a reference to the font size panel Element.
+    fontSizePanelEl = document.querySelector(`${containerSelector} .font-size-panel`);
+    if (!fontSizePanelEl) { throw new Error("Invalid font size panel Element"); }
+
+    // Make sure the font size panel is hidden.
+    if (fontSizePanelEl.classList.contains("show")) { fontSizePanelEl.classList.remove("show"); }
+    fontSizePanelEl.classList.add("hide");
+
+    // Create the font size label.
+    d3
+    .select(".font-size-panel")
+    .append("div")
+    .attr("class", "label")
+    .text("Font size");
+
+    // Create the slider control and a reference to it.
+    fontSliderEl = d3
+    .select(".font-size-panel")
+    .append("input")
+    .attr("class", "slider")
+    .attr("type", "range")
+    .attr("min", 4)
+    .attr("max", 8)
+    .attr("value", 4);
+
+    // changing the font on change of slider
+    fontSliderEl.on("input", function (e) {
+        const fontSize = e.target.value;
+        // console.log("FONT_SIZE",(e.target.value/2));
+        console.log("FONT", fontSize);
+        font = fontSize + "rem";
+        console.log("FOnt", font);
+
+        // Constrain the font size change to the taxonomy panel.
+        const treeTextSelector = `${containerSelector} .taxonomy-panel text`;
+        d3.selectAll(treeTextSelector).style("font-size", font);
+        getBBox(ds);
+      });
+  }
+
   // Initialize the release control with MSL releases.
   function initializeReleaseControl(releases_) {
     // for(var i=0;i<releases_.length;i++){
@@ -224,7 +262,7 @@ window.ICTV.d3TaxonomyVisualization = function (
     }
 
     const controlEl = document.querySelector(
-      `${containerSelector} .release-panel .release-ctrl`
+      `${containerSelector} .header-panel .release-ctrl`
     );
     if (!controlEl) {
       throw new Error("Invalid release control");
@@ -232,22 +270,26 @@ window.ICTV.d3TaxonomyVisualization = function (
     // Clear any existing options
     controlEl.innerHTML = null;
     // speciesPanelEl.innerHTML = null;
+
     // Add an option for each release.
     releases_.forEach(function (release) {
       const option = document.createElement("option");
       option.text = !release.label ? release.year : release.label;
-      option.value = isNaN(parseFloat(release.year))
-        ? "2022"
-        : release.year;
+      option.value = isNaN(parseFloat(release.year)) ? null : release.year;
       controlEl.appendChild(option);
     });
 
     // Add a "change" event handler
-
     controlEl.addEventListener("change", function (e) {
       speciesPanelEl.querySelector(".parent-name").innerHTML = "";
       speciesPanelEl.querySelector(".species-list").innerHTML = "";
       displayReleaseTaxonomy(e.target.value);
+        
+        // Make sure the font size panel is visible.
+        if (!!fontSizePanelEl && fontSizePanelEl.classList.contains("hide")) {
+            fontSizePanelEl.classList.remove("hide");
+            fontSizePanelEl.classList.add("show");
+        }
     });
     // speciesPanelEl.addEventListener("change", function(e) {
     //           displaySpecies(parentName, parentRank, parentTaxNodeID,e.target.value)
@@ -256,6 +298,10 @@ window.ICTV.d3TaxonomyVisualization = function (
     //  rankCount=releases_[i].rankCount;
 
     // }
+
+    // Select the most recent release.
+    controlEl.options.selectedIndex = 0;
+    controlEl.dispatchEvent(new Event("change"));
   }
 
   // Display the taxonomy tree for the release selected by the user.
@@ -423,23 +469,12 @@ window.ICTV.d3TaxonomyVisualization = function (
         }
       });
 
-      // changing the font on change of slider
-      slider.on("input", function (e) {
-        const fontSize = e.target.value;
-        // console.log("FONT_SIZE",(e.target.value/2));
-        const r = e.target.value;
-        console.log("FONT", fontSize);
-        font = "";
-        font = fontSize + "rem";
-        console.log("FOnt", font);
-        d3.selectAll("text").style("font-size", font);
-        getBBox(ds);
-      });
       // Create and populate the tree structure.
       createTree(ds);
+
       //displaying the slider only if a release is selected
-      slider.style("display", "block");
-      Text.style("display", "block");
+      //slider.style("display", "block");
+      //Text.style("display", "block");
 
       // TODO: this needs a more informative name.
       var i = 0;
@@ -779,17 +814,17 @@ window.ICTV.d3TaxonomyVisualization = function (
               return "#000000";
             })
             .on("click", function (e, d) {
-              slider.attr("value", 4);
-              console.log("in click d = ", d, num);
-              //  check=rankYear;
-              return displaySpecies(
-                d.data.name,
-                d.data.rankName,
-                d.data.has_species,
-                check,
-                d.data.taxNodeID,
-                release_
-              );
+                fontSliderEl.attr("value", 4);
+                console.log("in click d = ", d, num);
+                //  check=rankYear;
+                return displaySpecies(
+                    d.data.name,
+                    d.data.rankName,
+                    d.data.has_species,
+                    check,
+                    d.data.taxNodeID,
+                    release_
+                );
             })
             .attr("dx", settings.node.textDx)
             .attr("dy", settings.node.textDy)
@@ -967,13 +1002,13 @@ window.ICTV.d3TaxonomyVisualization = function (
                 return "#000000";
               }
             })
-            .style("font-size", slider.property("value") + "rem");
+            .style("font-size", fontSliderEl.property("value") + "rem");
           // Transform
           Update.select("text.legend-node-text")
             .attr("transform", function (d, i) {
-              if (d.data.taxNodeID === "legend") {
+              /*if (d.data.taxNodeID === "legend") {
                 return "rotate(-45 0,-110)";
-              }
+              }*/
             })
             .style("fill", function (d) {
               findParent(d);
