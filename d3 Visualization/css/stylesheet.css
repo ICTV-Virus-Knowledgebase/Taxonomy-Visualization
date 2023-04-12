@@ -9,17 +9,17 @@
 #d3_taxonomy_vis_container .release-panel {
     width: 100%;
 }
-.node circle{
+#d3_taxonomy_vis_container .node circle{
     display: flex;
     justify-content: center;
     align-items: center;
 }
-.slider{
+#d3_taxonomy_vis_container .slider{
     position:relative;
     right:-100px;
     top:-20px;
 }
-.text_slider{
+#d3_taxonomy_vis_container .text_slider{
     position:relative;
     right:-105px;
     top:-30px;
