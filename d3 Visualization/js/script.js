@@ -142,7 +142,7 @@ window.ICTV.d3TaxonomyVisualization = function (
     // Populate the parent name panel.
     console.log(speciesArray);
     if (hasSpecies && !species_flag) {
-      nameEl.innerHTML = `Species of <span class="parent-rank">${parentRank}</div> <em>${parentName}<\em>`;
+      nameEl.innerHTML = `Species of <span class="parent-rank">${parentRank}</span><br/><em>${parentName}<\em>`;
     } else {
       nameEl.innerHTML = "";
     }
