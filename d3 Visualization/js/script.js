@@ -98,12 +98,17 @@ window.ICTV.d3TaxonomyVisualization = function (
     check,
     parentTaxNodeID
   ) {
+
+    console.log(`in displaySpecies parentName: ${parentName}, hasSpecies: ${hasSpecies}`)
+
     var species_flag = false;
     // Validate the parameters
     // if (!releases_) { throw new Error("Invalid releases in initializeReleaseControl"); }
     if (!parentName || parentName.length < 1) {
       throw new Error("Error in displaySpecies: Invalid parent name parameter");
-    }
+    } 
+    if (parentName === "Unassigned") { species_flag = true; }
+
     if (!parentRank || parentRank.length < 1) {
       throw new Error("Error in displaySpecies: Invalid parent rank parameter");
     }
@@ -115,7 +120,8 @@ window.ICTV.d3TaxonomyVisualization = function (
     const strTaxNodeID = new String(parentTaxNodeID);
     // Get all species associated with the parent.
     const speciesArray = speciesData[strTaxNodeID];
-    // if (!speciesArray) { throw new Error(`Invalid species array for taxnodeID ${parentTaxNodeID}`); }
+    if (!speciesArray || speciesArray.length < 1) { species_flag = true; }
+
     const speciesPanelEl = document.querySelector(
       `${containerSelector} .species-panel`
     );
@@ -135,8 +141,8 @@ window.ICTV.d3TaxonomyVisualization = function (
     }
     // Populate the parent name panel.
     console.log(speciesArray);
-    if (hasSpecies) {
-      nameEl.innerHTML = `Species of ${parentRank} <em>${parentName}<\em>`;
+    if (hasSpecies && !species_flag) {
+      nameEl.innerHTML = `Species of <span class="parent-rank">${parentRank}</div> <em>${parentName}<\em>`;
     } else {
       nameEl.innerHTML = "";
     }
@@ -160,11 +166,11 @@ window.ICTV.d3TaxonomyVisualization = function (
 
         listEl.appendChild(speciesEl);
       });
-    } else {
+    } /*else {
       const speciesEl = document.createElement("div");
       speciesEl.className = "species-row";
       speciesEl.innerHTML = "";
-    }
+    }*/
   }
 
   // Return the color associated with this rank name and whether or not the node has child nodes.
@@ -472,10 +478,7 @@ window.ICTV.d3TaxonomyVisualization = function (
       // Create and populate the tree structure.
       createTree(ds);
 
-      //displaying the slider only if a release is selected
-      //slider.style("display", "block");
-      //Text.style("display", "block");
-
+      
       // TODO: this needs a more informative name.
       var i = 0;
 
@@ -1160,6 +1163,9 @@ window.ICTV.d3TaxonomyVisualization = function (
             if (d.data.taxNodeID !== "legend" && d.data.rankName !== "tree") {
               // dmd 01/31/23 Replaced "body" with containerSelector.
               d3.select(containerSelector).selectAll("div.tooltip").remove();
+
+              if (d.data.name === "Unassigned") { return; }
+              
               toolTip = true;
               // dmd 01/31/23 Replaced "body" with containerSelector, replaced "event" with "e".
               var div = d3
