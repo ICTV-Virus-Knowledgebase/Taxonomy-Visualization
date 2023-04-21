@@ -7,7 +7,7 @@ GO
 -- Author: don dempsey
 -- Created on: 09/21/22
 -- Description: Initialize the taxon_json.json column
--- Updated: 
+-- Updated: 04/20/23 dmd: Now displaying "" instead of null in child_counts.
 -- ==========================================================================================================
 
 -- Delete any existing versions.
@@ -27,7 +27,7 @@ BEGIN
 	--==========================================================================================================
 	UPDATE tj SET json = 
 		'"child_counts":'+CASE
-			WHEN tj.child_counts IS NULL OR LEN(tj.child_counts) < 1 THEN 'null' ELSE '"'+tj.child_counts+'"'
+			WHEN tj.child_counts IS NULL OR LEN(tj.child_counts) < 1 THEN '""' ELSE '"'+tj.child_counts+'"'
 		END +','+
 		'"has_assigned_siblings":'+CASE
 			WHEN ISNULL(tj.has_assigned_siblings, 0) = 0 THEN 'false' ELSE 'true'

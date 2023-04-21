@@ -42,7 +42,7 @@ BEGIN
 		tree_id
 	)
 	SELECT
-		child_counts,
+		ISNULL(child_counts, ''),
 		child_json = NULL,
 		has_species,
 		is_ghost_node = 0,

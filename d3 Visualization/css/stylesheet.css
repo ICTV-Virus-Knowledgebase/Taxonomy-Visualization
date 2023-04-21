@@ -37,6 +37,7 @@
 
 /*
 #d3_taxonomy_vis_container .font-size-panel .slider {
+    
 }
 */
 
@@ -46,7 +47,7 @@
     display: flex;
     flex: 1 0 auto;
     flex-flow: row nowrap;
-    height: 85vh;
+    height: 100vh;
     justify-content: flex-start;
     width: 100vw;
 }
@@ -66,6 +67,10 @@
     font-style: italic;
     text-align: right;
 }
+#d3_taxonomy_vis_container .unassigned-text {
+    color: #999;
+    text-align: right;
+}
 #d3_taxonomy_vis_container .legend-node-text {
     font-size: 1.5rem;
     font-style: normal;
@@ -75,48 +80,51 @@
     transform-origin: left left; 
 }
 
-/* The tooltip */
-#d3_taxonomy_vis_container div.tooltip {
-    position: absolute;
-    width: auto;
-    height: auto;
-    padding: 2px;
-    background: #f3f3ef;
-    border: solid 1px #aaa;
-    border-radius: 8px;
-    opacity: 0;
+
+/* The tippy tooltip */
+.ictv-tax-viz-tooltip .rank-and-name {
+    align-items: baseline;
+    border-color: #ccc;
+    border-style: solid;
+    border-width: 0 0 1px 0;
+    display: flex;
+    flex-flow: row nowrap;
+    font-size: 1.0rem;
+    padding-bottom: 0.20rem;
+    text-transform: capitalize;
+}
+.ictv-tax-viz-tooltip .history {
+    margin-top: 0.5rem;
+}
+.ictv-tax-viz-tooltip .child-count {
+    display: flex;
+    flex-flow: row nowrap;
+    margin-top: 0.25rem;
+}
+.tippy-box[data-theme~='ICTV-Tooltip'] {
+    background-color: #eee;
+    color: #000;
+}
+.tippy-box[data-theme~='ICTV-Tooltip'] .tippy-arrow {
+    color: #eee;
 }
 
 
-#d3_taxonomy_vis_container div.tooltip:hover{
-    opacity: 1;
-    transition-delay: 1000;
-    -moz-transition-delay: 1000;
-}
-
+/* The species panel */
 #d3_taxonomy_vis_container .species-panel {
     background-color: #efefef;
     height: 100%;
     overflow-y: auto;
-    overflow-x: hidden;
-    width: 15vw;
+    width: 20%;
 }
 #d3_taxonomy_vis_container .species-panel .parent-rank {
     text-transform: capitalize;
 }
-
-#d3_taxonomy_vis_container .species-panel .parent-name:not(:empty) {
-    border-bottom-style: solid;
-}
-
 #d3_taxonomy_vis_container .species-panel .parent-name {
     font-size: 1.0rem;
     font-weight: bold;
-    text-align: center;
     margin-bottom: 1.0rem;
-    margin-left: 0.5rem;
-    margin-right: 0.5rem;
-    word-break: normal;
+    word-break: break-all;
 }
 #d3_taxonomy_vis_container .species-panel .species-list {
     align-items: flex-start;
@@ -129,9 +137,7 @@
 #d3_taxonomy_vis_container .species-panel .species-row {
     color: blue;
     margin-bottom: 0.5rem;
-    margin-left: 0.5rem;
-    margin-right: 0.5rem;
-    word-break: normal;
+    word-break: break-all;
 }
 #d3_taxonomy_vis_container .species-panel .species-row:hover {
     cursor: pointer;
