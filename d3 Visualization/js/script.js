@@ -1,13 +1,19 @@
 
 // Create the ICTV namespace if it doesn't already exist.
-if (!window.ICTV) {
-    window.ICTV = {};
-}
+if (!window.ICTV) { window.ICTV = {}; }
+
+console.log("window = ", window)
 
 // Make sure the tippy library is available.
 if (!window.tippy) {
-    if (!tippy) { throw new Error("Unable to find the tippy.js library"); }
-    window.tippy = tippy;
+    if (!!tippy) { 
+        window.tippy = tippy; 
+    }  else { 
+        //throw new Error("Unable to find the tippy.js library"); 
+        console.log("Unable to find the tippy.js library"); 
+        window.tippy = {};
+        window.tippy["delegate"] = function (dummyOne, dummyTwo) {}
+    }
 }
 
 
