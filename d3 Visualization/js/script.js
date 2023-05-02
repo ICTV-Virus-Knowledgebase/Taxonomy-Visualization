@@ -2,17 +2,16 @@
 // Create the ICTV namespace if it doesn't already exist.
 if (!window.ICTV) { window.ICTV = {}; }
 
-console.log("window = ", window)
-
 // Make sure the tippy library is available.
 if (!window.tippy) {
     if (!!tippy) { 
         window.tippy = tippy; 
     }  else { 
-        //throw new Error("Unable to find the tippy.js library"); 
+        // Since tippy.js isn't available, add a dummy delegate function so tooltips will fail gracefully.
         console.log("Unable to find the tippy.js library"); 
-        window.tippy = {};
-        window.tippy["delegate"] = function (dummyOne, dummyTwo) {}
+        window.tippy = {
+            delegate: function (dummyOne, dummyTwo) {}
+        };
     }
 }
 
@@ -21,28 +20,24 @@ window.ICTV.d3TaxonomyVisualization = function (
     containerSelector_,
     dataURL_,
     releases_,
-    taxonDetailsURL_
+    taxonDetailsURL_,
+    taxonomyURL_
 ) {
     // Validate input parameters
-    if (!containerSelector_) {
-        throw new Error("Invalid container selector");
-    }
+    if (!containerSelector_) { throw new Error("Invalid container selector"); }
     const containerSelector = containerSelector_;
 
-    if (!dataURL_) {
-        throw new Error("Invalid data URL");
-    }
+    if (!dataURL_) { throw new Error("Invalid data URL"); }
     const dataURL = dataURL_;
 
-    if (!releases_) {
-        throw new Error("Invalid releases");
-    }
+    if (!releases_) { throw new Error("Invalid releases"); }
     const releases = releases_;
 
-    if (!taxonDetailsURL_) {
-        throw new Error("Invalid taxon details URL");
-    }
+    if (!taxonDetailsURL_) { throw new Error("Invalid taxon details URL"); }
     const taxonDetailsURL = taxonDetailsURL_;
+
+    if (!taxonomyURL_) { throw new Error("Invalid taxonomy web service URL"); }
+    const taxonomyURL = taxonomyURL_;
 
     // Configuration settings (to replace hard-coded values below)
     const settings = {
@@ -89,20 +84,6 @@ window.ICTV.d3TaxonomyVisualization = function (
     var max = 0;
     var fs = 0;
 
-    // The DOM Element for the font size panel and slider (these are assigned in "iniitializeFontSizePanel").
-    let fontSizePanelEl = null;
-    let fontSliderEl = null;
-
-    // This will be populated with a release's species data.
-    let speciesData = null;
-
-    // Initialize the font size slider and its label.
-    initializeFontSizePanel();
-
-    // Initialize the release control with MSL releases.
-    initializeReleaseControl(releases);
-
-
     // Get and validate the species panel's parent name Element.
     const speciesParentEl = document.querySelector(`${containerSelector} .species-panel .parent-name`);
     if (!speciesParentEl) { throw new Error("Invalid parent name element"); }
@@ -110,6 +91,27 @@ window.ICTV.d3TaxonomyVisualization = function (
     // Get and validate the species panel's species list Element.
     const speciesListEl = document.querySelector(`${containerSelector} .species-panel .species-list`);
     if (!speciesListEl) { throw new Error("Invalid species list element"); }
+
+    // The DOM Element for the font size panel and slider (these are assigned in "iniitializeFontSizePanel").
+    let fontSizePanelEl = null;
+    let fontSliderEl = null;
+
+    // The DOM Element for the release control (this is assigned in "initializeReleaseControl").
+    let releaseControlEl = null;
+
+    // This will be populated with a release's species data.
+    let speciesData = null;
+
+    // Initialize the search panel object.
+    const searchPanel = new window.ICTV.SearchPanel(selectSearchResult, `${containerSelector} .search-results-panel`, 
+        `${containerSelector} .search-panel`, taxonomyURL);
+    searchPanel.initialize();
+
+    // Initialize the font size slider and its label.
+    initializeFontSizePanel();
+
+    // Initialize the release control with MSL releases.
+    initializeReleaseControl(releases);
 
 
     // Clear the contents of the species panel.
@@ -243,51 +245,47 @@ window.ICTV.d3TaxonomyVisualization = function (
     // Initialize the release control with MSL releases.
     function initializeReleaseControl(releases_) {
         
-        if (!releases_) {
-            throw new Error("Invalid releases in initializeReleaseControl");
-        }
+        if (!releases_) { throw new Error("Invalid releases in initializeReleaseControl"); }
 
-        const speciesPanelEl = document.querySelector(
-            `${containerSelector} .species-panel`
-        );
-        if (!speciesPanelEl) {
-            throw new Error("Invalid species panel element");
-        }
+        // Get the release control DOM Element.
+        releaseControlEl = document.querySelector(`${containerSelector} .header-panel .release-ctrl`);
+        if (!releaseControlEl) { throw new Error("Invalid release control"); }
 
-        const controlEl = document.querySelector(
-            `${containerSelector} .header-panel .release-ctrl`
-        );
-        if (!controlEl) {
-            throw new Error("Invalid release control");
-        }
         // Clear any existing options
-        controlEl.innerHTML = null;
-        // speciesPanelEl.innerHTML = null;
+        releaseControlEl.innerHTML = null;
 
         // Add an option for each release.
         releases_.forEach(function (release) {
             const option = document.createElement("option");
             option.text = !release.label ? release.year : release.label;
             option.value = isNaN(parseFloat(release.year)) ? null : release.year;
-            controlEl.appendChild(option);
+            releaseControlEl.appendChild(option);
         });
 
         // Add a "change" event handler
-        controlEl.addEventListener("change", function (e) {
-            speciesPanelEl.querySelector(".parent-name").innerHTML = "";
-            speciesPanelEl.querySelector(".species-list").innerHTML = "";
-            displayReleaseTaxonomy(e.target.value);
+        releaseControlEl.addEventListener("change", function (e) {
+
+            const releaseNumber = e.target.value;
+
+            // Clear the species panel
+            clearSpeciesPanel();
+
+            // Display the taxonomy of the selected release.
+            displayReleaseTaxonomy(releaseNumber);
 
             // Make sure the font size panel is visible.
             if (!!fontSizePanelEl && fontSizePanelEl.classList.contains("hide")) {
                 fontSizePanelEl.classList.remove("hide");
                 fontSizePanelEl.classList.add("show");
             }
+
+            // Update the search panel's current release.
+            searchPanel.currentRelease = releaseNumber;
         });
 
         // Select the most recent release.
-        controlEl.options.selectedIndex = 0;
-        controlEl.dispatchEvent(new Event("change"));
+        releaseControlEl.options.selectedIndex = 0;
+        releaseControlEl.dispatchEvent(new Event("change"));
     }
 
     // Display the taxonomy tree for the release selected by the user.
@@ -329,10 +327,7 @@ window.ICTV.d3TaxonomyVisualization = function (
         const speciesFilename = `${dataURL}/data/species_${release_}.json`;
 
         // Load the species data for this release.
-        speciesData = await d3.json(speciesFilename).then(function (s) {
-            // document.querySelector(`${containerSelector} .species-panel`).innerHTML="";
-            return s;
-        });
+        speciesData = await d3.json(speciesFilename).then(function (s) { return s; });
         if (!speciesData) {
             throw new Error(`Invalid species data for release ${release_}`);
         }
@@ -379,7 +374,7 @@ window.ICTV.d3TaxonomyVisualization = function (
 
             var genus = false;
 
-            // dmd 02/07/23 Set the width and height available within the SVG.
+            // Set the width and height available within the SVG.
             const availableHeight =
                 settings.svg.height -
                 settings.svg.margin.left -
@@ -1153,5 +1148,21 @@ window.ICTV.d3TaxonomyVisualization = function (
             }
 
         });
+    }
+
+    // This function is called when a search result is selected in the searchPanel. A reference to it is 
+    // passed as a parameter to the search panel object's "constructor".
+    function selectSearchResult(lineage_, releaseNumber_) {
+
+        // Select the specified release.
+        releaseControlEl.value = releaseNumber_;
+        releaseControlEl.dispatchEvent(new Event("change"));
+
+        alert("TODO: use lineage to select taxa nodes after the tree has been refreshed")
+
+        const taxa = lineage_.split(">");
+        taxa.forEach((taxon_) => {
+            console.log(taxon_)
+        })
     }
 };
