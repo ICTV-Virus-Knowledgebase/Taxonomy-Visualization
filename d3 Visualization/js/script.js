@@ -61,8 +61,8 @@ window.ICTV.d3TaxonomyVisualization = function (
         tooltip: {
             animation: "scale",
             hideDelay: 0,
-            interactiveBorder: 5,
-            showDelay: 300
+            interactiveBorder: 10,
+            showDelay: 500
         },
         xFactor: 0.5, // TODO: this is influencing Y offset, not X
         yFactor: 300,
