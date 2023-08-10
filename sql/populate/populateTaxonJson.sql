@@ -89,12 +89,16 @@ BEGIN
     AND ghostNode.is_ghost_node = 1
 
 
+    -- Populate the JSON lineage column from the top to the bottom of the tree.
+    EXEC dbo.initializeJsonLineageColumn 
+        @treeID = @treeID
+
 	-- Populate the JSON column from the bottom to the top of the tree.
 	EXEC dbo.initializeJsonColumn
         @speciesRankIndex = @speciesRankIndex,
         @treeID = @treeID
 
-
+    
 	/*
 
 	Use this when exporting JSON (this example uses a tree ID of 202100000):

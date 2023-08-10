@@ -1,12 +1,15 @@
 
 
 /*
+
+-- NOTE: initializeTaxonRanks.sql needs to be run before running this!
+
 DECLARE @treeID AS INT
 
 DECLARE release_cursor CURSOR FORWARD_ONLY FOR
 
 	SELECT tree_id 
-	FROM [ICTVonline38].dbo.taxonomy_toc 
+	FROM v_taxonomy_toc 
 	WHERE msl_release_num IS NOT NULL
 	ORDER BY tree_id
 
@@ -19,7 +22,6 @@ BEGIN
 	EXEC dbo.populateTaxonJSON @treeID = @treeID
 
 	FETCH NEXT FROM release_cursor INTO @treeID
-
 END
 
 CLOSE release_cursor  

@@ -106,6 +106,8 @@ window.ICTV.SearchPanel = function (resultSelectionCallback_, resultsSelector_, 
         self.elements.includeAllReleases = document.querySelector(`${self.searchPanelSelector} .include-all-releases`);
         if (!self.elements.includeAllReleases) { return self.createError("Invalid include all releases element"); }
 
+        // Pressing the enter key while the focus is on the "include all releases" checkbox is 
+        // the same as clicking the search button.
         self.elements.includeAllReleases.addEventListener("keypress", async (event_) => {
             if (event_.key === "Enter") {
                 event_.preventDefault();
@@ -182,7 +184,7 @@ window.ICTV.SearchPanel = function (resultSelectionCallback_, resultsSelector_, 
             type: "POST",
             url: self.taxonomyURL,
             data: {
-                action_code: "search_taxonomy",
+                action_code: "visual_taxonomy_search",
                 include_all_releases: includeAllReleases,
                 msl_release: self.currentRelease,
                 search_text: searchText
@@ -219,12 +221,12 @@ window.ICTV.SearchPanel = function (resultSelectionCallback_, resultsSelector_, 
                     `<tr>
                         <td class="view-ctrl">
                             <button class="slim-btn view-search-result-ctrl"
-                                data-id="${searchResult_.taxnodeID}" 
-                                data-lineage="${searchResult_.lineage}" 
+                                data-id="${searchResult_.jsonID}" 
+                                data-lineage="${searchResult_.jsonLineage}" 
                                 data-release="${searchResult_.treeName}">View</button>
                         </td>
                         <td class="release-name">${searchResult_.treeName}</td>
-                        <td class="level-name">${searchResult_.levelName}</td>
+                        <td class="level-name">${searchResult_.rankName}</td>
                         <td class="result-html">${searchResult_.lineageHTML}</td>
                     </tr>`;
                     

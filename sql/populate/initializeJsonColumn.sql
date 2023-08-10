@@ -8,6 +8,8 @@ GO
 -- Created on: 09/21/22
 -- Description: Initialize the taxon_json.json column
 -- Updated: 04/20/23 dmd: Now displaying "" instead of null in child_counts.
+--          07/19/23 dmd: Included "json_id" attribute in JSON column (taxon_json.id), 
+--                        Replaced specific references to an ICTVonline* db with views. 
 -- ==========================================================================================================
 
 -- Delete any existing versions.
@@ -39,6 +41,8 @@ BEGIN
 		'"has_unassigned_siblings":'+CASE
 			WHEN ISNULL(tj.has_unassigned_siblings, 0) = 0 THEN 'false' ELSE 'true'
 		END +','+
+        '"json_id":'+CAST(tj.id AS VARCHAR(12))+','+
+        '"json_lineage":"'+ISNULL(tj.json_lineage, '')+'",'+
 		'"name":'+CASE
 			WHEN tn.name IS NULL THEN '"Unassigned"' ELSE '"'+tn.name+'"'
 		END +','+
@@ -54,7 +58,7 @@ BEGIN
 		tr.rank_index = tj.rank_index
 		AND tr.tree_id = @treeID
 	)
-	LEFT JOIN [ICTVonline38].dbo.taxonomy_node tn ON tn.taxnode_id = tj.taxnode_id
+	LEFT JOIN v_taxonomy_node tn ON tn.taxnode_id = tj.taxnode_id
 	WHERE tj.tree_id = @treeID
 
 	
@@ -102,7 +106,7 @@ BEGIN
 					END +
 				'}'
 				FROM taxon_json tj
-				LEFT JOIN [ICTVonline38].dbo.taxonomy_node tn ON tn.taxnode_id = tj.taxnode_id
+				LEFT JOIN v_taxonomy_node tn ON tn.taxnode_id = tj.taxnode_id
 				WHERE tj.parent_id = @id
 				AND tj.tree_id = @treeID
 				AND tj.rank_index < @speciesRankIndex
@@ -128,7 +132,7 @@ BEGIN
 					ELSE '{'+tj.json+'"children":null}'
 				END
 				FROM taxon_json tj
-				JOIN [ICTVonline38].dbo.taxonomy_node tn ON (
+				JOIN v_taxonomy_node tn ON (
 					tn.taxnode_id = tj.taxnode_id
 					AND tn.tree_id = tj.tree_id
 				)

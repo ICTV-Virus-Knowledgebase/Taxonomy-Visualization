@@ -15,6 +15,7 @@ CREATE TABLE [dbo].[taxon_json](
 	[has_unassigned_siblings] [nchar](10) NULL,
 	[is_ghost_node] [bit] NOT NULL,
 	[json] [nvarchar](max) NULL,
+    [json_lineage] [nvarchar](max) NULL,
 	[parent_distance] [int] NULL,
 	[parent_id] [int] NULL,
 	[parent_taxnode_id] [int] NULL,

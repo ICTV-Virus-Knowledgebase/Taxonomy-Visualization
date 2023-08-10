@@ -7,7 +7,7 @@ GO
 -- Author: don dempsey
 -- Created on: 09/21/22
 -- Description: Initialize the taxon_json table from the ICTV taxonomy_node table.
--- Updated: 
+-- Updated: 07/19/23 dmd: Replaced specific references to an ICTVonline* db with views. 
 -- ==========================================================================================================
 
 -- Delete any existing versions.
@@ -62,7 +62,7 @@ BEGIN
 			has_species = CASE
 				WHEN 0 < (
 					SELECT COUNT(*)
-					FROM [ICTVonline38].dbo.taxonomy_node species
+					FROM v_taxonomy_node species
 					WHERE species.parent_id = tn.taxnode_id
 					AND species.level_id = 600
 					AND species.tree_id = @treeID
@@ -74,12 +74,12 @@ BEGIN
 			tn.taxnode_id,
 			tn.tree_id
 
-		FROM [ICTVonline38].dbo.taxonomy_node tn
+		FROM v_taxonomy_node tn
 		JOIN taxon_rank tr ON (
 			tr.level_id = tn.level_id
 			AND tr.tree_id = @treeID
 		)
-		LEFT JOIN [ICTVonline38].dbo.taxonomy_node ptn ON (
+		LEFT JOIN v_taxonomy_node ptn ON (
 			ptn.taxnode_id = tn.parent_id
 			AND ptn.tree_id = @treeID
 		)
@@ -103,7 +103,6 @@ BEGIN
 	)
 
 
-    -- dmd 031423
     -- Populate the parent ID of all species whose parent has a rank index of at 
     -- least 2 less than the species rank index.
     UPDATE species
