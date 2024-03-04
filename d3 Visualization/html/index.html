@@ -89,13 +89,14 @@
     document.addEventListener("DOMContentLoaded", function () {
 
         const containerSelector = "#d3_taxonomy_vis_container";
+        const currentRelease = 38;
         const dataURL = "..";
         const taxonDetailsURL = "https://ictv.global/taxonomy/taxondetails";
         
         // The taxonomy web service URL.
         const taxonomyURL = "https://data.ictv.global/api/taxonomy.ashx";
 
-        window.ICTV.d3TaxonomyVisualization(containerSelector, dataURL, releases, taxonDetailsURL, taxonomyURL);
+        window.ICTV.d3TaxonomyVisualization(containerSelector, currentRelease, dataURL, releases, taxonDetailsURL, taxonomyURL);
     });
     
 </script>
