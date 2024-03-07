@@ -18,23 +18,27 @@ if (!window.tippy) {
 
 window.ICTV.d3TaxonomyVisualization = function (
    containerSelector_,
-   currentRelease_, 
+   currentReleaseNumber_, 
    dataURL_,
    releases_,
    taxonDetailsURL_,
    taxonomyURL_
 ) {
+
+   // Maintain a copy of "this" to avoid scope ambiguity.
+   const self = this;
+
    // Validate input parameters
    if (!containerSelector_) { throw new Error("Invalid container selector"); }
    const containerSelector = containerSelector_;
 
-   if (!currentRelease_) { throw new Error("Invalid current release"); }
-   const currentRelease = currentRelease_;
+   if (!currentReleaseNumber_) { throw new Error("Invalid current release number"); }
+   const currentReleaseNumber = currentReleaseNumber_;
 
    if (!dataURL_) { throw new Error("Invalid data URL"); }
    const dataURL = dataURL_;
 
-   if (!releases_) { throw new Error("Invalid releases"); }
+   if (!releases_) { throw new Error("Invalid MSL releases parameter"); }
    const releases = releases_;
 
    if (!taxonDetailsURL_) { throw new Error("Invalid taxon details URL"); }
@@ -80,11 +84,9 @@ window.ICTV.d3TaxonomyVisualization = function (
    var selected;
    var num_flag = false;
    var num;
-   var check;
    var name = "";
    var arr = [];
    var temp = 0;
-   var rankYear = 0;
    var Flag = true;
    var max = 0;
    var fs = 0;
@@ -108,6 +110,7 @@ window.ICTV.d3TaxonomyVisualization = function (
    // The DOM Element for the font size panel and slider (these are assigned in "iniitializeFontSizePanel").
    let fontSizePanelEl = null;
    let fontSliderEl = null;
+
    // DOM element for Zoom slider (assigned in "initialzeZoomPanel")
    let ZoomPanelEl = null;
    let ZoomSliderEl = null;
@@ -123,19 +126,21 @@ window.ICTV.d3TaxonomyVisualization = function (
    let speciesData = null;
 
    // Initialize the search panel object.
-   const searchPanel = new window.ICTV.SearchPanel(currentRelease, selectSearchResult, `${containerSelector} .search-results-panel`,
+   const searchPanel = new window.ICTV.SearchPanel(currentReleaseNumber, selectSearchResult, `${containerSelector} .search-results-panel`,
       `${containerSelector} .search-panel`, taxonomyURL);
    searchPanel.initialize();
 
    // Initialize the font size slider and its label.
    initializeFontSizePanel();
+
    // Initialize the Zoom slider and its label.
    initializeZoomPanel();
+
    //Initialize ss 
    initializeButton();
 
-   // Initialize the release control with MSL releases.
-   initializeReleaseControl(releases);
+   // Initialize the release control using MSL release data.
+   initializeReleaseControl();
 
 
    // Clear the contents of the species panel.
@@ -224,6 +229,7 @@ window.ICTV.d3TaxonomyVisualization = function (
    }
 
 
+   // TODO: What button? Give this a better name!
    function initializeButton() {
       // Get a reference to the panel Element.
       let buttonE1 = document.querySelector(`${containerSelector} .font-size-panel`);
@@ -321,9 +327,7 @@ window.ICTV.d3TaxonomyVisualization = function (
                };
                img1.src = screenshots[0];
             });
-         }
-
-         else if (selectedFormat === "pdf") {
+         } else if (selectedFormat === "pdf") {
             let printWindow = window.open('', '_blank');
             printWindow.document.write('<html><head><title>Print</title></head><body>');
             printWindow.document.write(taxonomyPanel.outerHTML);
@@ -335,10 +339,6 @@ window.ICTV.d3TaxonomyVisualization = function (
       }
       );
    }
-
-
-
-
 
 
 
@@ -359,8 +359,20 @@ window.ICTV.d3TaxonomyVisualization = function (
       .call(zoom)
       .on("dblclick.zoom", null);
 
+
+   // Use the release year to lookup and return the corresponding release data.
+   function getRelease(releaseYear) {
+
+      if (!releaseYear) { throw new Error("Invalid release year in getRelease (empty)"); }
+
+      const release = releases.data[`r${releaseYear}`];
+      if (!release) { throw new Error(`No release found for release year ${releaseYear}`); }
+
+      return release;
+   }
+
    function initializeZoomPanel() {
-      let ZoomPanelEl = document.querySelector(`${containerSelector} .font-size-panel`);
+      ZoomPanelEl = document.querySelector(`${containerSelector} .font-size-panel`);
       if (!ZoomPanelEl) { throw new Error("Invalid font size panel Element"); }
 
       if (ZoomPanelEl.classList.contains("show")) { ZoomPanelEl.classList.remove("show"); }
@@ -371,7 +383,7 @@ window.ICTV.d3TaxonomyVisualization = function (
          .attr("class", "label")
          .text("Zoom Slider");
 
-      let ZoomSliderEl = d3
+      ZoomSliderEl = d3
          .select(".font-size-panel")
          .append("input")
          .attr("class", "slider")
@@ -389,7 +401,6 @@ window.ICTV.d3TaxonomyVisualization = function (
          svg.call(zoom.transform, d3.zoomIdentity.translate(currentTransform.x, currentTransform.y).scale(zoomValue));
       });
    }
-
 
    // Initialize the font size slider and its label.
    function initializeFontSizePanel() {
@@ -435,9 +446,9 @@ window.ICTV.d3TaxonomyVisualization = function (
    }
 
    // Initialize the release control with MSL releases.
-   function initializeReleaseControl(releases_) {
+   function initializeReleaseControl() {
 
-      if (!releases_) { throw new Error("Invalid releases in initializeReleaseControl"); }
+      if (!releases) { throw new Error("Invalid MSL releases in initializeReleaseControl"); }
 
       // Get the release control DOM Element.
       releaseControlEl = document.querySelector(`${containerSelector} .header-panel .release-ctrl`);
@@ -446,24 +457,38 @@ window.ICTV.d3TaxonomyVisualization = function (
       // Clear any existing options
       releaseControlEl.innerHTML = null;
 
-      // Add an option for each release.
-      releases_.forEach(function (release) {
+      // Add an option for each release year.
+      releases.displayOrder.forEach(async (releaseKey_) => {
+
+         // Get the release corresponding to this release key. Note that a release 
+         // key is the release year prefaced by "r".
+         const release = releases.data[releaseKey_];
+         if (!release) { return; }
+
+         // Create an option Element and set its display text and value.
          const option = document.createElement("option");
-         option.text = !release.label ? release.year : release.label;
-         option.value = isNaN(parseFloat(release.year)) ? null : release.year;
+         option.text = release.year;
+         option.value = release.year;
+
          releaseControlEl.appendChild(option);
-      });
+         return;
+      })
 
       // Add a "change" event handler
-      releaseControlEl.addEventListener("change", function (e) {
+      releaseControlEl.addEventListener("change", (e_) => {
 
-         const releaseNumber = e.target.value;
+         const releaseYear = e_.target.value;
+         if (!releaseYear) { throw new Error("Invalid release control value"); }
+
+         // Get the release data for this year.
+         const release = getRelease(releaseYear);
+         if (!release) { throw new Error(`No release data available for release year ${releaseYear}`)}
 
          // Clear the species panel
          clearSpeciesPanel();
 
          // Display the taxonomy of the selected release.
-         displayReleaseTaxonomy(releaseNumber);
+         displayReleaseTaxonomy(releaseYear);
 
          // Make sure the font size panel is visible.
          if (!!fontSizePanelEl && fontSizePanelEl.classList.contains("hide")) {
@@ -472,8 +497,7 @@ window.ICTV.d3TaxonomyVisualization = function (
          }
 
          // Update the search panel's current release.
-         searchPanel.currentRelease = releaseNumber;
-         console.log("Search", e.target.value)
+         searchPanel.currentRelease = release.releaseNumber;
       });
 
       // Select the most recent release.
@@ -482,46 +506,38 @@ window.ICTV.d3TaxonomyVisualization = function (
    }
 
    // Display the taxonomy tree for the release selected by the user.
-   async function displayReleaseTaxonomy(release_) {
+   async function displayReleaseTaxonomy(releaseYear_) {
 
-      check = rankYear;
+      if (!releaseYear_) { throw new Error("Invalid release year in displayReleaseTaxonomy"); }
 
-      //fetching the rankCont
-      for (let i = 0; i < releases_.length; i++) {
-         if (releases_[i].year == release_) {
-            var rankCount = releases_[i].rankCount;
-            rankYear = releases_[i].year;
-            console.log("RANK", rankYear);
-            num = 0;
-            temp = 0;
-            arr = [];
-            Flag = false;
-            Sflag = false;
-            num_flag = false;
-            max = 0;
-            len = 0;
-            counter = 0;
-            res = []
-            break;
-         }
-      }
+      // Get the release data for this year.
+      const release = getRelease(releaseYear_);
+      if (!release) { throw new Error(`No data available for release year ${releaseYear_}`); }
 
-      // Validate the release parameter. If the first 2 characters are numeric, we will assume it's valid.
-      if (!release_ || isNaN(parseInt(release_.substr(0, 2)))) {
-         throw new Error("Invalid release in displayReleaseTaxonomy");
-      }
+      const rankCount = release.rankCount;
+      
+      // TODO: Figure out the purpose of these variables and give them better names!
+      num = 0;
+      temp = 0;
+      arr = [];
+      Flag = false;
+      Sflag = false;
+      num_flag = false;
+      max = 0;
+      len = 0;
+      counter = 0;
+      res = [];
 
       // If there's already an SVG element in the taxonomy panel, delete it.
-      let existingSVG = document.querySelector(
-         `${containerSelector} .taxonomy-panel svg `
-      );
-      if (!!existingSVG) {
-         existingSVG.remove();
-      }
+      const existingSVG = document.querySelector(`${containerSelector} .taxonomy-panel svg `);
+      if (!!existingSVG) { existingSVG.remove(); }
+
+      // Format the release year for use as part of a JSON filename.
+      let filenameReleaseYear = releaseYear_.replace(/a$/, "").replace(/b$/, ".5");
 
       // Determine the filenames for the non-species and species JSON files.
-      const nonSpeciesFilename = `${dataURL}/data/nonSpecies_${release_}.json`;
-      const speciesFilename = `${dataURL}/data/species_${release_}.json`;
+      const nonSpeciesFilename = `${dataURL}/data/nonSpecies_${filenameReleaseYear}.json`;
+      const speciesFilename = `${dataURL}/data/species_${filenameReleaseYear}.json`;
 
       // Load the species data for this release.
       speciesData = await d3.json(speciesFilename).then(function (s) { return s; });
@@ -529,6 +545,7 @@ window.ICTV.d3TaxonomyVisualization = function (
          throw new Error(`Invalid species data for release ${release_}`);
       }
 
+      // TODO: the non-species file shouldn't be opened twice. Improve the code below!!!
       // Load the non-species data for this release.
       d3.json(nonSpeciesFilename).then(function (data) {
          const ab = d3.hierarchy(data, function (d) {
@@ -567,6 +584,7 @@ window.ICTV.d3TaxonomyVisualization = function (
          });
          //console.log("NUM", max);
       });
+
       d3.json(nonSpeciesFilename).then(function (data) {
 
          var genus = false;
@@ -1413,11 +1431,21 @@ window.ICTV.d3TaxonomyVisualization = function (
    function selectSearchResult(event_, lineage_, releaseNumber_) {
 
       // dmd testing 
-      console.log("in selectSearchResult, event_ = ", event_)
+      console.log(`in selectSearchResult, lineage = ${lineage_}, release number = ${releaseNumber_}, and event = `, event_)
 
       // Select the specified release.
       releaseControlEl.value = releaseNumber_;
       releaseControlEl.dispatchEvent(new Event("change"));
+
+
+      // dmd testing 03/07/24
+      const clearButtonEl = document.querySelector(".search-panel .clear-button");
+      if (!clearButtonEl) { throw new Error("Invalid clear button element"); }
+
+      console.log("clearButtonEl = ", clearButtonEl)
+
+      clearButtonEl.dispatchEvent(new Event("click"));
+
 
       // TODO: Use lineage to select taxa nodes after the tree has been refreshed
       

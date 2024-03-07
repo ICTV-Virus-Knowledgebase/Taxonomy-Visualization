@@ -2,14 +2,16 @@
 // Create the ICTV namespace if it doesn't already exist.
 if (!window.ICTV) { window.ICTV = {}; }
 
-window.ICTV.SearchPanel = function (currentRelease_, resultSelectionCallback_, resultsSelector_, searchPanelSelector_, taxonomyURL_) {
+window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallback_, resultsSelector_, searchPanelSelector_, taxonomyURL_) {
 
    // Maintain a copy of "this" to avoid scope ambiguity.
    const self = this;
 
    // The current MSL release.
-   this.currentRelease = currentRelease_;
-   if (!this.currentRelease) { throw new Error("Invalid current release parameter"); }
+   this.currentReleaseNumber = currentReleaseNumber_;
+   if (!this.currentReleaseNumber) { throw new Error("Invalid current release number parameter"); }
+
+   console.log("in searchPanel this.currentRelease = ", this.currentReleaseNumber)
 
    // This prefix will be added to all error messages.
    this.errorPrefix = "Error in SearchPanel:";
@@ -179,20 +181,19 @@ window.ICTV.SearchPanel = function (currentRelease_, resultSelectionCallback_, r
       // TODO: make sure the results panel is visible!
 
       // Perform the search by calling the taxonomy web service.
-      const response = await jQuery.ajax({
+      const searchResults = await jQuery.ajax({
          dataType: "json",
          processData: true,
          type: "POST",
          url: self.taxonomyURL,
          data: {
             action_code: "search_visual_taxonomy",
-            current_release: self.currentRelease,
+            current_release: self.currentReleaseNumber,
             include_all_releases: includeAllReleases,
             search_text: searchText,
             selected_release: null
          },
          success: (data_) => {
-            console.log("in success, data = ", data_)
             return data_;
          }
       });
@@ -201,28 +202,29 @@ window.ICTV.SearchPanel = function (currentRelease_, resultSelectionCallback_, r
       self.elements.clearButton.disabled = false;
       self.elements.searchButton.disabled = false;
 
+      // Validate the response and add a "No results" message if no results were returned.
+      if (searchResults === null || !Array.isArray(searchResults) || searchResults.length < 1) {
+         self.elements.resultsPanel.innerHTML = "No results";
+         return;
+      }
 
       let resultCount = 0;
 
       // Generate HTML for the search results table.
       let html =
          `<table class="search-results-table cell-border compact stripe">
-                <thead>
-                    <tr class="header-row">
-                        <th data-orderable="false"></th>
-                        <th>Release</th>
-                        <th>Rank</th>
-                        <th>Name</th>
-                    </tr>
-                </thead>
-                <tbody>`;
-
-      if (!response || !Array.isArray(response.searchResults) || response.searchResults.length < 1) {
-         self.elements.resultsPanel.innerHTML = "No results";
-         return;
-      }
-
-      response.searchResults.forEach((searchResult_) => {
+            <thead>
+               <tr class="header-row">
+                  <th data-orderable="false"></th>
+                  <th>Release</th>
+                  <th>Rank</th>
+                  <th>Name</th>
+               </tr>
+            </thead>
+            <tbody>`;
+   
+      // Add a table row for every search result.
+      searchResults.forEach((searchResult_) => {
          html +=
             `<tr>
                <td class="view-ctrl">
@@ -274,6 +276,7 @@ window.ICTV.SearchPanel = function (currentRelease_, resultSelectionCallback_, r
          searching: false
       });
 
+      return;
    }
 
 }
