@@ -263,8 +263,11 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
          const releaseNumber = buttonEl.getAttribute("data-release");
          if (!releaseNumber) { return self.createError("Invalid releaseNumber attribute"); }
 
+         const ID = buttonEl.getAttribute("data-id");
+         if (!ID) { return self.createError("Invalid data-id attribute"); }
+
          // Pass the lineage and release number to the result selection callback.
-         self.resultSelectionCallback(event_, lineage, releaseNumber);
+         self.resultSelectionCallback(event_, lineage, releaseNumber, ID);
 
          return false;
       })

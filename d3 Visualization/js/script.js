@@ -18,7 +18,7 @@ if (!window.tippy) {
 
 window.ICTV.d3TaxonomyVisualization = function (
    containerSelector_,
-   currentReleaseNumber_, 
+   currentReleaseNumber_,
    dataURL_,
    releases_,
    taxonDetailsURL_,
@@ -482,7 +482,7 @@ window.ICTV.d3TaxonomyVisualization = function (
 
          // Get the release data for this year.
          const release = getRelease(releaseYear);
-         if (!release) { throw new Error(`No release data available for release year ${releaseYear}`)}
+         if (!release) { throw new Error(`No release data available for release year ${releaseYear}`) }
 
          // Clear the species panel
          clearSpeciesPanel();
@@ -515,7 +515,7 @@ window.ICTV.d3TaxonomyVisualization = function (
       if (!release) { throw new Error(`No data available for release year ${releaseYear_}`); }
 
       const rankCount = release.rankCount;
-      
+
       // TODO: Figure out the purpose of these variables and give them better names!
       num = 0;
       temp = 0;
@@ -703,7 +703,7 @@ window.ICTV.d3TaxonomyVisualization = function (
 
             function pageNodes(d, maxNode) {
 
-               //console.log("MAX", max);
+               // console.log("MAX", max);
 
                if (d.children) {
                   d.children.forEach((c) => pageNodes(c, maxNode));
@@ -803,6 +803,22 @@ window.ICTV.d3TaxonomyVisualization = function (
                   .enter()
                   .append("g")
                   .attr("class", "node")
+                  // add data-id atttribute fo callback function
+                  .attr("data-id", function (d) {
+                     return d.data.json_id;
+                  })
+                  .attr("data-lineage", function (d) {
+                     return d.data.json_lineage;
+                  })
+                  .attr("parent-name", function (d) {
+                     return d.data.name;
+                  })
+                  .attr("parent-rank", function (d) {
+                     return d.data.rankName;
+                  })
+                  .attr("parent-taxNodeId", function (d) {
+                     return d.data.taxNodeID;
+                  })
                   .attr("transform", function (d) {
                      if (!d || isNaN(source.x0) || isNaN(source.y0)) {
                         return null;
@@ -810,6 +826,7 @@ window.ICTV.d3TaxonomyVisualization = function (
                      return "translate(" + source.y0 + "," + source.x0 + ")";
                   })
                   .on("click", click);
+
 
                Enter.append("rect")
                   .style("stroke", "black")
@@ -956,7 +973,7 @@ window.ICTV.d3TaxonomyVisualization = function (
                      // TODO: why is the value reset here?
                      fontSliderEl.attr("value", 4);
 
-                     //console.log("in click d = ", d, num);
+                     // console.log("in click d = ", d, num);
 
                      if (!d.data.name || d.data.name.length < 1 || d.data.name === "Unassigned" ||
                         !d.data.rankName || d.data.rankName.length < 1 ||
@@ -969,6 +986,7 @@ window.ICTV.d3TaxonomyVisualization = function (
                      } else {
 
                         // Populate the species panel
+                        console.log("name", d.data.name, "rank", d.data.rankName, "taxnode", d.data.taxNodeID);
                         return displaySpecies(d.data.name, d.data.rankName, d.data.taxNodeID);
                      }
                   })
@@ -1428,10 +1446,10 @@ window.ICTV.d3TaxonomyVisualization = function (
 
    // This function is called when a search result is selected in the searchPanel. A reference to it is 
    // passed as a parameter to the search panel object's "constructor".
-   function selectSearchResult(event_, lineage_, releaseNumber_) {
+   function selectSearchResult(event_, lineage_, releaseNumber_, ID_) {
 
       // dmd testing 
-      console.log(`in selectSearchResult, lineage = ${lineage_}, release number = ${releaseNumber_}, and event = `, event_)
+      console.log(`in selectSearchResult, lineage = ${lineage_}, release number = ${releaseNumber_}, ID = ${ID_}, and event = `, event_)
 
       // Select the specified release.
       releaseControlEl.value = releaseNumber_;
@@ -1446,10 +1464,117 @@ window.ICTV.d3TaxonomyVisualization = function (
 
       clearButtonEl.dispatchEvent(new Event("click"));
 
+      //TODO: Trigger a click event on top-level taxon after the tree has been refreshed
+
+       /*-------------------------------------------------------------------------------------------------------------------
+         The code below works on parent level nodes to expand the tree. Does not work when you select a child node.
+        -------------------------------------------------------------------------------------------------------------------*/
+
+      // setTimeout(() => {
+      //    const nodeToExpand = document.querySelector(`g[data-id="${ID_}"]`);
+      //    const lineage = document.querySelector(`g[data-lineage="${lineage_}"]`);
+      //    nodeToExpand.dispatchEvent(new Event("click"));
+      //    console.log(nodeToExpand);
+      // }, 2000);
+
+      /*-------------------------------------------------------------------------------------------------------------------
+         This code works when child nodes are selected. But opens all nodes at once instead of waiting until the 
+         previous node is opened.
+        -------------------------------------------------------------------------------------------------------------------*/
+      // setTimeout(() => {
+      //    // const lineage_node = document.querySelector(`g[data-lineage="${lineage_}"]`);
+      //    const resultNode = document.querySelector(`g[data-id="${ID_}"]`);
+      //    for (let i = 1; i < lineage_.length; i++) {
+      //       const lineage_array = lineage_.split(",");
+      //       let notResultNode = document.querySelector(`g[data-id="${lineage_array[i]}"]`);
+      //       if (lineage_array[i] !== ID_) {
+      //          // notResultNode = document.querySelector(`g[data-id="${lineage_array[i]}"]`);
+      //          console.log("notResultNode = ", notResultNode);
+      //          notResultNode.dispatchEvent(new Event("click"));
+      //       }
+      //    }
+      // }, 2000);
+
+      /*-------------------------------------------------------------------------------------------------------------------
+         This code works to open nodes one at a time. It waits for the previous node to open before opening the next one.
+         I do this by using another time out for the loop
+        -------------------------------------------------------------------------------------------------------------------*/
+      // setTimeout(() => {
+      //    // console.log("ID_ = ", ID_);
+      //    // console.log("resultNode = ", resultNode);
+      //    const lineage_array = lineage_.split(",");
+         
+      //    for (let i = 1; i < lineage_array.length; i++) {
+      //       const dataID = ID_;
+      //       ((i) => {
+      //          setTimeout(() => {
+      //             const resultNode = document.querySelector(`g[data-id="${ID_}"]`);
+      //             const notResultNode = document.querySelector(`g[data-id="${lineage_array[i]}"]`);
+      //             if (lineage_array[i] === dataID) {
+      //                console.log("dataID = ", dataID);
+      //                console.log("notResultNode = ", notResultNode);
+      //                console.log("resultNode = ", resultNode);
+      //                console.log("lineage_array[i] = ", lineage_array[i]);
+      //                return;
+
+      //             }
+      //             if (lineage_array[i] !== dataID) {
+      //                console.log("dataID = ", dataID);
+      //             }
+      //             notResultNode.dispatchEvent(new Event("click"));
+      //          }, 1000 * i);
+      //       })(i);
+      //    }
+      // }, 1000);
+
+      setTimeout(() => {
+         // take the commas out of the array
+         const lineage_array = lineage_.split(",");
+         for (let i = 1; i < lineage_array.length; i++) {
+            ((i) => {
+               setTimeout(() => {
+                  const notResultNode = document.querySelector(`g[data-id="${lineage_array[i]}"]`);
+                  if (notResultNode === null) {
+                     if (lastValidNode !== null) {
+                         // Get the parameters from the node's data attributes
+                         const parentName = lastValidNode.getAttribute('parent-name');
+                         const parentRank = lastValidNode.getAttribute('parent-rank');
+                         const parentTaxNodeID = lastValidNode.getAttribute('parent-taxNodeId');
+                 
+                         // Call the displaySpecies function
+                         displaySpecies(parentName, parentRank, parentTaxNodeID);
+                 
+                         console.log("Node not found: ", lineage_array[i]);
+                     }
+                     return;
+                 }
+                 lastValidNode = notResultNode;
+                 lastValidNode = notResultNode;
+                  // Check if the node has text
+                  const textNode = notResultNode.querySelector('text');
+                  // when there is a ghost node, do not dispatch the click event
+                  if (textNode === null || textNode.textContent.trim() === '') {
+                     console.log("Node has no text: ", lineage_array[i]);
+                     return;
+                  }
+                  // when index value does not equal the data-id, open the node
+                  // if it is the target node, stop the loop
+                  if (lineage_array[i] !== ID_) {
+                     console.log("dataID = ", ID_);
+                     notResultNode.dispatchEvent(new Event("click"));
+                  } else {
+                     console.log("Reached the target node: ", ID_);
+                     return;
+                  }
+                  // time interval for each node to open
+               }, 1100 * i);
+            })(i);
+         }
+      }, 300);
+
 
       // TODO: Use lineage to select taxa nodes after the tree has been refreshed
-      
-      
+
       /*-------------------------------------------------------------------------------------------------------------------
 
       NOTE: this commented code is the previous attempt to select a node using taxnodeID. It worked in 
@@ -1503,18 +1628,20 @@ function expandTreeToNode(data) {
    expandTree(node);
 }
 
+
 function traverseTreeToFindNode(currentNode, node) {
    if (currentNode.name === node) {
       return currentNode;
    }
    for (let i = 0; i < currentNode.children.length; i++) {
-      let result = traverseTreeToFindNode(currentNode.children[i], nodeName);
+      let result = traverseTreeToFindNode(currentNode.children[i], node);
       if (result != null) {
          return result;
       }
    }
    return null;
 }
+
 
 
 
