@@ -81,7 +81,7 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
       // The HTML to add to the search panel.
       const html =
          `<div class="input-group search-controls">
-                <input type="text" class="form-control search-text" placeholder="Search taxonomy..." />
+                <input type="text" class="form-control search-text" placeholder="Search current release..." />
                 <button class="btn search-button"><i class="fa fa-search"></i> Search</button>
                 <button class="btn clear-button"><i class="fa fa-times"></i> Reset</button>
             </div>
@@ -108,6 +108,19 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
       //------------------------------------------------------------------------------------------------------
       self.elements.includeAllReleases = document.querySelector(`${self.searchPanelSelector} .include-all-releases`);
       if (!self.elements.includeAllReleases) { return self.createError("Invalid include all releases element"); }
+
+      // Get the search input element
+      self.elements.checkBox = document.querySelector(`${self.searchPanelSelector} .search-text`);
+      if (!self.elements.checkBox) { return self.createError("Invalid search input element"); }
+
+      // Change the placeholder of the search input when the checkbox is clicked
+      self.elements.includeAllReleases.addEventListener("change", (event_) => {
+         if (event_.target.checked) {
+            self.elements.checkBox.placeholder = "Search all releases...";
+         } else {
+            self.elements.checkBox.placeholder = "Search current release...";
+         }
+      });
 
       // Pressing the enter key while the focus is on the "include all releases" checkbox is 
       // the same as clicking the search button.

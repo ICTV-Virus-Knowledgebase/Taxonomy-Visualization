@@ -467,7 +467,7 @@ window.ICTV.d3TaxonomyVisualization = function (
 
          // Create an option Element and set its display text and value.
          const option = document.createElement("option");
-         option.text = release.year;
+         option.text = `${release.year} (MSL ${release.releaseNum})`;
          option.value = release.year;
 
          releaseControlEl.appendChild(option);
@@ -1527,6 +1527,9 @@ window.ICTV.d3TaxonomyVisualization = function (
       //    }
       // }, 1000);
 
+      // 03/07/24 current bug: upon clicking search result button and tree animates,
+      // if the user does another search, the tree does not refresh correctly after search
+      // press. The user would have to refresh page to do another search.
       setTimeout(() => {
          // take the commas out of the array
          const lineage_array = lineage_.split(",");
@@ -1549,7 +1552,6 @@ window.ICTV.d3TaxonomyVisualization = function (
                      return;
                  }
                  lastValidNode = notResultNode;
-                 lastValidNode = notResultNode;
                   // Check if the node has text
                   const textNode = notResultNode.querySelector('text');
                   // when there is a ghost node, do not dispatch the click event
@@ -1567,10 +1569,10 @@ window.ICTV.d3TaxonomyVisualization = function (
                      return;
                   }
                   // time interval for each node to open
-               }, 1100 * i);
+               }, 1100 * 1);
             })(i);
          }
-      }, 300);
+      }, 2000);
 
 
       // TODO: Use lineage to select taxa nodes after the tree has been refreshed
