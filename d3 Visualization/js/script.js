@@ -819,6 +819,12 @@ window.ICTV.d3TaxonomyVisualization = function (
                   .attr("parent-taxNodeId", function (d) {
                      return d.data.taxNodeID;
                   })
+                  .attr("has_species", function (d) {
+                     return d.data.has_species;
+                  })
+                  .attr("is_assigned", function (d) {
+                     return d.data.is_assigned;
+                  })
                   .attr("transform", function (d) {
                      if (!d || isNaN(source.x0) || isNaN(source.y0)) {
                         return null;
@@ -1527,53 +1533,165 @@ window.ICTV.d3TaxonomyVisualization = function (
       //    }
       // }, 1000);
 
+      /*-------------------------------------------------------------------------------------------------------------------
+        
+        -------------------------------------------------------------------------------------------------------------------*/
+
       // 03/07/24 current bug: upon clicking search result button and tree animates,
       // if the user does another search, the tree does not refresh correctly after search
       // press. The user would have to refresh page to do another search.
-      setTimeout(() => {
+      // setTimeout(() => {
+      //    // take the commas out of the array
+      //    const lineage_array = lineage_.split(",");
+      //    for (let i = 1; i < lineage_array.length; i++) {
+      //       ((i) => {
+      //          setTimeout(() => {
+      //             const notResultNode = d3.select(`g[data-id="${lineage_array[i]}"]`).node();
+      //             // const notResultNode = document.querySelector(`g[data-id="${lineage_array[i]}"]`);
+      //             if (notResultNode === null) {
+      //                if (lastValidNode !== null) {
+      //                    // Get the parameters from the node's data attributes
+      //                    const parentName = lastValidNode.getAttribute('parent-name');
+      //                    const parentRank = lastValidNode.getAttribute('parent-rank');
+      //                    const parentTaxNodeID = lastValidNode.getAttribute('parent-taxNodeId');
+                 
+      //                    // Call the displaySpecies function
+      //                    displaySpecies(parentName, parentRank, parentTaxNodeID);
+                 
+      //                    console.log("Node not found: ", lineage_array[i]);
+      //                }
+      //                return;
+      //            }
+      //            lastValidNode = notResultNode;
+      //             // Check if the node has text
+      //             const textNode = notResultNode.querySelector('text');
+      //             // when there is a ghost node, do not dispatch the click event
+      //             if (textNode === null || textNode.textContent.trim() === '') {
+      //                console.log("Node has no text: ", lineage_array[i]);
+      //                return;
+      //             }
+      //             // when index value does not equal the data-id, open the node
+      //             // if it is the target node, stop the loop
+      //             if (lineage_array[i] !== ID_) {
+      //                console.log("dataID = ", ID_);
+      //                notResultNode.dispatchEvent(new Event("click"));
+      //             } else {
+      //                console.log("Reached the target node: ", ID_);
+      //                return;
+      //             }
+      //             // time interval for each node to open
+      //          }, 1100 * 1);
+      //       })(i);
+      //    }
+      // }, 2000);
+
+      // setTimeout(() => {
+      //    // take the commas out of the array
+      //    const lineage_array = lineage_.split(",");
+      //    for (let i = 1; i < lineage_array.length; i++) {
+      //       ((i) => {
+      //          setTimeout(() => {
+      //             const notResultNode = document.querySelector(`g[data-id="${lineage_array[i]}"]`);
+      //             const hasSpeciesNode = document.querySelector(`g[data-id="${lineage_array[i]}"]`);
+
+      //             // Call the displaySpecies function when the node has a species
+      //             if (hasSpeciesNode) {
+      //                const hasSpecies = hasSpeciesNode.getAttribute('has_species');
+      //                const parentName = hasSpeciesNode.getAttribute('parent-name');
+      //                const parentRank = hasSpeciesNode.getAttribute('parent-rank');
+      //                const parentTaxNodeID = hasSpeciesNode.getAttribute('parent-taxNodeId');
+      //                if (hasSpecies !== '0') {
+      //                   displaySpecies(parentName, parentRank, parentTaxNodeID);
+      //                }
+      //             } else {
+      //                console.log(`No node found with data-id "${lineage_array[i]}"`);
+      //             }
+
+      //             // when there is a ghost node, do not dispatch the click event
+      //             if (notResultNode) {
+      //                const is_assigned = notResultNode.getAttribute('is_assigned');
+      //                if (is_assigned === 'false') {
+      //                   console.log("Ghost Node: ", lineage_array[i]);
+      //                   return;
+      //                }
+      //             } else {
+      //                console.log(`No node found with data-id "${lineage_array[i]}"`);
+      //             }
+
+      //             // when index value does not equal the data-id, open the node
+      //             // if it is the target node, stop the loop
+      //             if (lineage_array[i] !== ID_) {
+      //                console.log("dataID = ", ID_);
+      //                notResultNode.dispatchEvent(new Event("click"));
+      //             } else {
+      //                console.log("Reached the target node: ", ID_);
+      //                return;
+      //             }
+      //             // time interval for each node to open
+      //          }, 1100 * 1);
+      //       })(i);
+      //    }
+      // }, 2000);
+
+
+      async function openNode(nodeId) {
+         return new Promise((resolve) => {
+            const notResultNode = document.querySelector(`g[data-id="${nodeId}"]`);
+
+            // Call the displaySpecies function when the node has a species
+            if (notResultNode) {
+               const hasSpecies = notResultNode.getAttribute('has_species');
+               const parentName = notResultNode.getAttribute('parent-name');
+               const parentRank = notResultNode.getAttribute('parent-rank');
+               const parentTaxNodeID = notResultNode.getAttribute('parent-taxNodeId');
+               if (hasSpecies !== '0') {
+                  displaySpecies(parentName, parentRank, parentTaxNodeID);
+               }
+            } else {
+               console.log(`Node has species: "${nodeId}"`);
+            }
+
+            // when there is a ghost node, do not dispatch the click event
+            if (notResultNode) {
+               const is_assigned = notResultNode.getAttribute('is_assigned');
+               if (is_assigned === 'false') {
+                  console.log("Ghost Node: ", nodeId);
+                  resolve();
+                  return;
+               }
+            } else {
+               console.log(`No node found with data-id "${nodeId}"`);
+            }
+
+            // when index value does not equal the data-id, open the node
+            // if it is the target node, stop the loop
+            if (nodeId !== ID_) {
+               console.log("dataID = ", ID_);
+               if (notResultNode) {
+                  notResultNode.dispatchEvent(new Event("click"));
+               } else {
+                  console.log(`No node found with data-id "${nodeId}"`);
+               }
+            } else {
+               console.log("Reached the target node: ", ID_);
+               resolve();
+               return;
+            }
+
+            // waiting set time for promise to resolve
+            setTimeout(resolve, 1100);
+         });
+      }
+
+      async function openNodes() {
          // take the commas out of the array
          const lineage_array = lineage_.split(",");
          for (let i = 1; i < lineage_array.length; i++) {
-            ((i) => {
-               setTimeout(() => {
-                  const notResultNode = document.querySelector(`g[data-id="${lineage_array[i]}"]`);
-                  if (notResultNode === null) {
-                     if (lastValidNode !== null) {
-                         // Get the parameters from the node's data attributes
-                         const parentName = lastValidNode.getAttribute('parent-name');
-                         const parentRank = lastValidNode.getAttribute('parent-rank');
-                         const parentTaxNodeID = lastValidNode.getAttribute('parent-taxNodeId');
-                 
-                         // Call the displaySpecies function
-                         displaySpecies(parentName, parentRank, parentTaxNodeID);
-                 
-                         console.log("Node not found: ", lineage_array[i]);
-                     }
-                     return;
-                 }
-                 lastValidNode = notResultNode;
-                  // Check if the node has text
-                  const textNode = notResultNode.querySelector('text');
-                  // when there is a ghost node, do not dispatch the click event
-                  if (textNode === null || textNode.textContent.trim() === '') {
-                     console.log("Node has no text: ", lineage_array[i]);
-                     return;
-                  }
-                  // when index value does not equal the data-id, open the node
-                  // if it is the target node, stop the loop
-                  if (lineage_array[i] !== ID_) {
-                     console.log("dataID = ", ID_);
-                     notResultNode.dispatchEvent(new Event("click"));
-                  } else {
-                     console.log("Reached the target node: ", ID_);
-                     return;
-                  }
-                  // time interval for each node to open
-               }, 1100 * 1);
-            })(i);
+            await openNode(lineage_array[i]);
          }
-      }, 2000);
+      }
 
+      setTimeout(openNodes, 1000);
 
       // TODO: Use lineage to select taxa nodes after the tree has been refreshed
 
