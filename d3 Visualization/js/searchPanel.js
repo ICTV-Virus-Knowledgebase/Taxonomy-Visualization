@@ -267,7 +267,8 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
          if (!buttonEl) { return; }
 
          event_.preventDefault();
-         event_.stopPropagation();
+         event_.stopImmediatePropagation();
+         // event_.stopPropagation();
 
          // Get the button's lineage attribute.
          const lineage = buttonEl.getAttribute("data-lineage");
