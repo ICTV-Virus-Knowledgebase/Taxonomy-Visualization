@@ -32,10 +32,10 @@ BEGIN
 		
 		SELECT 
 			tj.id,
-			ptj.json_lineage AS parent_lineage
+			parentTJ.json_lineage AS parent_lineage
 
 		FROM taxon_json tj
-		LEFT JOIN taxon_json ptj ON ptj.id = tj.parent_id
+		LEFT JOIN taxon_json parentTJ ON parentTJ.id = tj.parent_id
 		WHERE tj.tree_id = @treeID
 		ORDER BY tj.rank_index ASC
 
@@ -45,14 +45,14 @@ BEGIN
 	WHILE @@FETCH_STATUS = 0  
 	BEGIN
 
-		IF @parentLineage IS NULL OR @parentLineage = ''
-			SET @parentLineage = ''
-		ELSE
-			SET @parentLineage = @parentLineage+','
-
+      -- If the parent lineage isn't empty, append a comma.
+      IF @parentLineage IS NOT NULL AND LEN(@parentLineage) > 0 
+         SET @parentLineage = @parentLineage+','
+		ELSE 
+         SET @parentLineage = ''
+			
 		-- Populate the node's JSON lineage with its parent lineage and it's own ID.
-		UPDATE taxon_json SET
-		json_lineage = @parentLineage+CAST(@id AS VARCHAR(12))
+		UPDATE taxon_json SET json_lineage = @parentLineage+CAST(@id AS VARCHAR(12))
 		WHERE id = @id
 
 		FETCH NEXT FROM ranked_node_cursor INTO @id, @parentLineage

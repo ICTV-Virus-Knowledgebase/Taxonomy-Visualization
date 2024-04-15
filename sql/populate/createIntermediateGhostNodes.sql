@@ -20,7 +20,7 @@ CREATE PROCEDURE dbo.createIntermediateGhostNodes
 	@parentID AS INT,
 	@parentRankIndex AS INT,
 	@parentTaxnodeID AS INT,
-    @speciesRankIndex AS INT,
+   @speciesRankIndex AS INT,
 	@treeID AS INT
 
 AS

@@ -6,7 +6,7 @@ GO
 -- ==========================================================================================================
 -- Author: don dempsey
 -- Created on: 09/19/22
--- Description: Create ghost nodes in the taxon JSON table between top-level nodes and the tree node.
+-- Description: Create ghost nodes in the taxon JSON table between the tree node and top-level nodes.
 -- Updated: 
 -- ==========================================================================================================
 
@@ -38,15 +38,15 @@ BEGIN
 		)
 		IF @treeJsonID IS NULL THROW @errorCode, 'Invalid taxon_json.id for tree node', 1
 
-		-- What is the lowest (highest rank index) parent ghost node rank?
+      -- What is the maximum rank index among all non-ghost nodes that are directly under the tree node?
 		DECLARE @lowestRankToCreate AS INT = (
 			SELECT MAX(rank_index) - 1
 			FROM taxon_json
-			WHERE parent_taxnode_id = @treeID	-- Child nodes of the tree node.
-			AND taxnode_id <> @treeID			-- Exclude the tree node
-			AND tree_id = @treeID				-- Limit the tree / MSL release
-			AND is_ghost_node = 0
-			AND rank_index > 1					-- Exclude realm (and tree)
+			WHERE parent_taxnode_id = @treeID	-- Direct children of the tree node
+			AND taxnode_id <> @treeID			   -- Exclude the tree node
+			AND tree_id = @treeID				   -- Constrain the tree ID
+			AND is_ghost_node = 0               -- Not a ghost node
+			AND rank_index > 1					   -- Exclude realm (and tree)
 		)
 
 		DECLARE @currentRankIndex AS INT = 1
@@ -86,7 +86,7 @@ BEGIN
 		END
 
 
-		-- Variables used by the WHILE loop.
+		-- Variables used by the cursor below.
 		DECLARE @id AS INT
 		DECLARE @parentID AS INT
 

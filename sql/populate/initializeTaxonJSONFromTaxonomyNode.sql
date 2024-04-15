@@ -7,7 +7,11 @@ GO
 -- Author: don dempsey
 -- Created on: 09/21/22
 -- Description: Initialize the taxon_json table from the ICTV taxonomy_node table.
--- Updated: 07/19/23 dmd: Replaced specific references to an ICTVonline* db with views. 
+-- Updated: 07/19/23 dmd: Replaced specific references to an ICTVonline* db with views.
+--          04/03/24 dmd: Replacing hard-coded level ID for species, retrieving the rank index for genus,
+--                        species nodes are now being populated with valid json_lineage and parent_id,
+--                        non-species nodes that have immediate species node children now have valid 
+--                        species_json.
 -- ==========================================================================================================
 
 -- Delete any existing versions.
@@ -16,99 +20,134 @@ IF OBJECT_ID('dbo.initializeTaxonJSONFromTaxonomyNode') IS NOT NULL
 GO
 
 CREATE PROCEDURE dbo.initializeTaxonJSONFromTaxonomyNode
-    @speciesRankIndex AS INT,
+   @speciesRankIndex AS INT,
 	@treeID AS INT
 AS
 BEGIN
 	SET XACT_ABORT, NOCOUNT ON
 
-	-- Delete any existing records for this tree ID.
-	--DELETE FROM taxon_json WHERE tree_id = @treeID
+   -- A constant error code to use when throwing exceptions.
+	DECLARE @errorCode AS INT = 50000
 
-	-- Add taxonomy node records to the taxon JSON table.
-	INSERT INTO taxon_json (
-		child_counts,
-		child_json,
-		has_species,
-		is_ghost_node,
-		[json],
-		parent_distance,
-		parent_id,
-		parent_taxnode_id,
-		rank_index,
-		[source],
-		species_json,
-		taxnode_id,
-		tree_id
-	)
-	SELECT
-		ISNULL(child_counts, ''),
-		child_json = NULL,
-		has_species,
-		is_ghost_node = 0,
-		[json] = NULL,
-		parent_distance = rank_index - ISNULL(parent_rank_index, 0),
-		parent_id = NULL,
-		parent_taxnode_id,
-		rank_index,
-		'T',
-		species_json = NULL,
-		taxnode_id,
-		tree_id
+   BEGIN TRY
 
-	FROM (
-		SELECT 
-			child_counts = tn.taxa_desc_cts,
-			has_species = CASE
-				WHEN 0 < (
-					SELECT COUNT(*)
-					FROM v_taxonomy_node species
-					WHERE species.parent_id = tn.taxnode_id
-					AND species.level_id = 600
-					AND species.tree_id = @treeID
-				) THEN 1 ELSE 0
-			END,
-			parent_rank_index = ptr.rank_index,
-			parent_taxnode_id = tn.parent_id,
-			rank_index = tr.rank_index,
-			tn.taxnode_id,
-			tn.tree_id
+      -- Get the species level_id from taxonomy_level.
+      DECLARE @speciesLevelID AS INT = (SELECT TOP 1 id FROM dbo.v_taxonomy_level WHERE name = 'species')
+      IF @speciesLevelID IS NULL THROW @errorCode, 'Invalid level_id for species', 1   
 
-		FROM v_taxonomy_node tn
-		JOIN taxon_rank tr ON (
-			tr.level_id = tn.level_id
-			AND tr.tree_id = @treeID
-		)
-		LEFT JOIN v_taxonomy_node ptn ON (
-			ptn.taxnode_id = tn.parent_id
-			AND ptn.tree_id = @treeID
-		)
-		LEFT JOIN taxon_rank ptr ON (
-			ptr.level_id = ptn.level_id
-			AND ptr.tree_id = @treeID
-		)
-		WHERE tn.tree_id = @treeID
-	) taxa
+      -- Get the rank_index for genus.
+      DECLARE @genusRankIndex AS INT = (
+         SELECT TOP 1 rank_index 
+         FROM taxon_rank 
+         WHERE tree_id = @treeID
+         AND rank_name = 'genus'
+      )
+      IF @genusRankIndex IS NULL THROW @errorCode, 'Invalid rank index for genus', 1   
 
 
-	-- Populate parent taxon_json IDs for child nodes with parent nodes that are one rank above.
-	UPDATE tj
-	SET tj.parent_id = parent_tj.id
-	FROM taxon_json tj
-	JOIN taxon_json parent_tj ON (
-		parent_tj.taxnode_id = tj.parent_taxnode_id
-		AND parent_tj.rank_index = tj.rank_index - 1
-		AND parent_tj.id <> tj.id
-		AND parent_tj.tree_id = tj.tree_id
-	)
+      -- Add taxonomy node records to the taxon JSON table.
+      INSERT INTO taxon_json (
+         child_counts,
+         child_json,
+         has_species,
+         is_ghost_node,
+         [json],
+         parent_distance,
+         parent_id,
+         parent_taxnode_id,
+         rank_index,
+         [source],
+         species_json,
+         taxnode_id,
+         tree_id
+      )
+      SELECT
+         ISNULL(child_counts, ''),
+         child_json = NULL,
+         has_species,
+         is_ghost_node = 0,
+         [json] = NULL,
+         parent_distance = rank_index - ISNULL(parent_rank_index, 0),
+         parent_id = NULL,
+         parent_taxnode_id,
+         rank_index,
+         'T',
+         species_json = NULL,
+         taxnode_id,
+         tree_id
+
+      FROM (
+         SELECT 
+            child_counts = tn.taxa_desc_cts,
+            has_species = CASE
+               WHEN 0 < (
+                  SELECT COUNT(*)
+                  FROM v_taxonomy_node species
+                  WHERE species.parent_id = tn.taxnode_id
+                  AND species.level_id = @speciesLevelID
+                  AND species.tree_id = @treeID
+               ) THEN 1 ELSE 0
+            END,
+            parent_rank_index = parentRank.rank_index,
+            parent_taxnode_id = tn.parent_id,
+            rank_index = tr.rank_index,
+            tn.taxnode_id,
+            tn.tree_id
+
+         FROM v_taxonomy_node tn
+         JOIN taxon_rank tr ON (
+            tr.level_id = tn.level_id
+            AND tr.tree_id = @treeID
+         )
+         LEFT JOIN v_taxonomy_node parentTN ON (
+            parentTN.taxnode_id = tn.parent_id
+            AND parentTN.tree_id = @treeID
+         )
+         LEFT JOIN taxon_rank parentRank ON (
+            parentRank.level_id = parentTN.level_id
+            AND parentRank.tree_id = @treeID
+         )
+         WHERE tn.tree_id = @treeID
+      ) taxa
 
 
-    -- Populate the parent ID of all species whose parent has a rank index of at 
-    -- least 2 less than the species rank index.
-    UPDATE species
-    SET species.parent_id = parent.id
-    FROM taxon_json species
-    JOIN taxon_json parent ON parent.taxnode_id = species.parent_taxnode_id
-    WHERE species.rank_index = @speciesRankIndex
-    AND parent.rank_index < (@speciesRankIndex - 1)
+      -- Populate taxon_json parent_id for 1) child nodes with parent nodes that are 
+      -- one rank above (otherwise, the parent is a ghost node), and 2) child species
+      -- nodes whose parent has species nodes as immediate children.
+      UPDATE tj
+      SET tj.parent_id = parent_tj.id
+      FROM taxon_json tj
+      JOIN taxon_json parent_tj ON (
+         parent_tj.taxnode_id = tj.parent_taxnode_id
+         AND (
+            -- The child is directly beneath the parent (no intervening ghost nodes).
+            parent_tj.rank_index = tj.rank_index - 1
+
+            -- Or the child is a species and the parent has species nodes as immediate children.
+            OR (parent_tj.has_species = 1 AND tj.rank_index = @speciesRankIndex)
+         )
+         AND parent_tj.id <> tj.id
+         AND parent_tj.tree_id = tj.tree_id
+         
+      )
+      WHERE tj.tree_id = @treeID
+      AND tj.is_ghost_node = 0
+      AND parent_tj.is_ghost_node = 0
+
+
+      -- Populate the parent ID of all species whose parent has a rank index less than "genus".
+      UPDATE species
+      SET species.parent_id = parent.id
+      FROM taxon_json species
+      JOIN taxon_json parent ON parent.taxnode_id = species.parent_taxnode_id
+      WHERE species.rank_index = @speciesRankIndex
+      AND parent.rank_index < @genusRankIndex
+      AND species.tree_id = @treeID
+      AND parent.tree_id = @treeID
+
+   END TRY
+	BEGIN CATCH
+		DECLARE @errorMsg AS VARCHAR(200) = ERROR_MESSAGE()
+		RAISERROR(@errorMsg, 18, 1)
+	END CATCH 
 END

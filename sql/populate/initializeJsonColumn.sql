@@ -18,18 +18,18 @@ IF OBJECT_ID('dbo.initializeJsonColumn') IS NOT NULL
 GO
 
 CREATE PROCEDURE dbo.initializeJsonColumn
-    @speciesRankIndex AS INT,
+   @speciesRankIndex AS INT,
 	@treeID AS INT
 AS
 BEGIN
 	SET XACT_ABORT, NOCOUNT ON
 
 	--==========================================================================================================
-	-- Update the JSON column of every taxon_json record.
+	-- Populate the JSON column of every taxon_json record.
 	--==========================================================================================================
-	UPDATE tj SET json = 
+	UPDATE tj SET [json] = 
 		'"child_counts":'+CASE
-			WHEN tj.child_counts IS NULL OR LEN(tj.child_counts) < 1 THEN '""' ELSE '"'+tj.child_counts+'"'
+			WHEN tj.child_counts IS NULL OR LEN(tj.child_counts) < 1 THEN 'null' ELSE '"'+tj.child_counts+'"'
 		END +','+
 		'"has_assigned_siblings":'+CASE
 			WHEN ISNULL(tj.has_assigned_siblings, 0) = 0 THEN 'false' ELSE 'true'
@@ -99,7 +99,7 @@ BEGIN
 						-- Don't include species
 						WHEN tj.rank_index = @speciesRankIndex THEN 'null'
 
-						-- Use "null" instead of empty JSON (or an actual NULL).
+						-- Use "null" instead of empty JSON
 						WHEN tj.child_json IS NULL OR LEN(tj.child_json) < 1 THEN 'null'
 
 						ELSE '['+tj.child_json+']'
@@ -128,22 +128,22 @@ BEGIN
 			SELECT species_json = STRING_AGG(nodeJSON, ',')
 			FROM (
 				SELECT TOP 10000 nodeJSON = CASE
-					WHEN tj.taxnode_id IS NULL THEN NULL
-					ELSE '{'+tj.json+'"children":null}'
+					WHEN speciesTJ.taxnode_id IS NULL THEN NULL
+					ELSE '{'+speciesTJ.json+'"children":null}'
 				END
-				FROM taxon_json tj
+				FROM taxon_json speciesTJ
 				JOIN v_taxonomy_node tn ON (
-					tn.taxnode_id = tj.taxnode_id
-					AND tn.tree_id = tj.tree_id
+					tn.taxnode_id = speciesTJ.taxnode_id
+					AND tn.tree_id = speciesTJ.tree_id -- Probably unnecessary...
 				)
-				WHERE tj.parent_id = @id
-				AND tj.tree_id = @treeID
-				AND tj.rank_index = @speciesRankIndex
+				WHERE speciesTJ.parent_id = @id
+				AND speciesTJ.tree_id = @treeID
+				AND speciesTJ.rank_index = @speciesRankIndex
 				ORDER BY tn.name ASC
 			) speciesResults
 		)
 
-		IF LEN(@speciesJSON) > 0 SET @speciesJSON = '['+@speciesJSON+']' ELSE SET @speciesJSON = 'null'
+		IF LEN(@speciesJSON) > 0 SET @speciesJSON = '['+@speciesJSON+']' ELSE SET @speciesJSON = NULL
  
 		-- Update the taxon_json's species JSON column.
 		UPDATE taxon_json SET species_json = @speciesJSON WHERE id = @id
