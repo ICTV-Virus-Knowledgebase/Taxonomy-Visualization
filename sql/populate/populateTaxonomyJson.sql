@@ -6,16 +6,16 @@ GO
 -- ===================================================================================================================
 -- Author: don dempsey
 -- Created on: 09/22/22
--- Description: Initialize taxon_json from taxonomy_node, create ghost nodes, and initialize JSON for this tree ID.
--- Updated: 
+-- Description: Initialize taxonomy_json from taxonomy_node, create ghost nodes, and initialize JSON for this tree ID.
+-- Updated: 04/25/24 dmd: Renaming taxon_json to taxonomy_json. 
 -- ===================================================================================================================
 
 -- Delete any existing versions.
-IF OBJECT_ID('dbo.populateTaxonJSON') IS NOT NULL
-	DROP PROCEDURE dbo.populateTaxonJSON
+IF OBJECT_ID('dbo.populateTaxonomyJSON') IS NOT NULL
+	DROP PROCEDURE dbo.populateTaxonomyJSON
 GO
 
-CREATE PROCEDURE dbo.populateTaxonJSON
+CREATE PROCEDURE dbo.populateTaxonomyJSON
 	@treeID AS INT
 
 AS
@@ -26,7 +26,7 @@ BEGIN
 	DECLARE @errorCode AS INT = 50000
 
 	-- Delete any existing nodes associated with the tree ID.
-	DELETE FROM taxon_json WHERE tree_id = @treeID
+	DELETE FROM taxonomy_json WHERE tree_id = @treeID
 
    BEGIN TRY
 
@@ -35,17 +35,17 @@ BEGIN
       --==========================================================================================================
       DECLARE @speciesRankIndex AS INT = (
          SELECT TOP 1 rank_index
-         FROM taxon_rank
+         FROM taxonomy_json_rank
          WHERE rank_name = 'species'
          AND tree_id = @treeID
       )
       IF @speciesRankIndex IS NULL THROW @errorCode, 'Invalid species rank index', 1
 
       --==========================================================================================================
-      -- Create taxon_json records for all taxonomy nodes with the specified tree ID. After all have been created, 
+      -- Create taxonomy_json records for all taxonomy nodes with the specified tree ID. After all have been created, 
       -- populate the parent ID column for these records.
       --==========================================================================================================
-      EXEC dbo.initializeTaxonJSONFromTaxonomyNode
+      EXEC dbo.initializeTaxonomyJSONFromTaxonomyNode
          @speciesRankIndex = @speciesRankIndex,
          @treeID = @treeID
 
@@ -63,7 +63,7 @@ BEGIN
       SET has_assigned_siblings = CASE
          WHEN 0 = (
             SELECT COUNT(*)
-            FROM taxon_json assigned
+            FROM taxonomy_json assigned
             WHERE assigned.parent_id = tj.parent_id
             AND assigned.is_ghost_node = 0
             AND assigned.id <> tj.id
@@ -73,14 +73,14 @@ BEGIN
       has_unassigned_siblings = CASE
          WHEN 0 = (
             SELECT COUNT(*)
-            FROM taxon_json unassigned
+            FROM taxonomy_json unassigned
             WHERE unassigned.parent_id = tj.parent_id
             AND unassigned.is_ghost_node = 1
             AND unassigned.id <> tj.id
             AND unassigned.rank_index = tj.rank_index
          ) THEN 0 ELSE 1
       END
-      FROM taxon_json tj
+      FROM taxonomy_json tj
       WHERE tj.tree_id = @treeID
 
       --==========================================================================================================
@@ -91,13 +91,13 @@ BEGIN
          WHEN 0 < (
             -- The number of species that are immediate children of the ghost node.
             SELECT COUNT(*)
-            FROM taxon_json ctj
+            FROM taxonomy_json ctj
             WHERE ctj.parent_id = ghostNode.id
             AND ctj.rank_index = @speciesRankIndex
             AND ctj.tree_id = @treeID
          ) THEN 1 ELSE 0
       END
-      FROM taxon_json ghostNode
+      FROM taxonomy_json ghostNode
       WHERE ghostNode.tree_id = @treeID
       AND ghostNode.is_ghost_node = 1
 
@@ -113,14 +113,6 @@ BEGIN
       EXEC dbo.initializeJsonColumn
          @speciesRankIndex = @speciesRankIndex,
          @treeID = @treeID
-
-      /*
-      Use this when exporting JSON (this example uses a tree ID of 202100000):
-
-         DECLARE @treeID AS INT = 202100000 -- (example tree ID)
-         EXEC dbo.exportNonSpeciesTaxonomyJSON @treeID = @treeID
-         EXEC dbo.exportSpeciesTaxonomyJSON @treeID = @treeID
-      */
 
    END TRY
 	BEGIN CATCH

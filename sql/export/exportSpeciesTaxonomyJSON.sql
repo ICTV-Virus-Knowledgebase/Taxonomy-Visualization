@@ -6,8 +6,8 @@ GO
 -- ==========================================================================================================
 -- Author: don dempsey
 -- Created on: 08/23/22
--- Description:	Export species taxon_json records as JSON for the specified treeID.
--- Updated: 
+-- Description: Export species taxonomy_json records as JSON for the specified treeID.
+-- Updated: 04/25/24 dmd: Renaming taxon_json to taxonomy_json.
 -- ==========================================================================================================
 
 -- Delete any existing versions.
@@ -25,7 +25,7 @@ BEGIN
     SELECT species_lookup = '{'+CAST(species_json AS VARCHAR(MAX))+'}'
     FROM (
         SELECT species_json = STRING_AGG('"'+CAST(tj.taxnode_id AS VARCHAR(12))+'":'+tj.species_json, ',')
-        FROM taxon_json tj
+        FROM taxonomy_json tj
         WHERE tj.tree_id = @treeID
         AND tj.has_species = 1
         AND tj.species_json IS NOT NULL 

@@ -7,11 +7,13 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
    // Maintain a copy of "this" to avoid scope ambiguity.
    const self = this;
 
-   // The current MSL release.
-   this.currentReleaseNumber = currentReleaseNumber_;
-   if (!this.currentReleaseNumber) { throw new Error("Invalid current release number parameter"); }
+   if (!currentReleaseNumber_) { throw new Error("Invalid current release number parameter"); }
 
-   console.log("in searchPanel this.currentRelease = ", this.currentReleaseNumber)
+   // The current and selected MSL release numbers.
+   this.releaseNumber = {
+      current: currentReleaseNumber_,
+      selected: currentReleaseNumber_
+   }
 
    // This prefix will be added to all error messages.
    this.errorPrefix = "Error in SearchPanel:";
@@ -31,12 +33,12 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
 
    // Define the collection of DOM elements.
    this.elements = {
-      clearButton: HTMLButtonElement,
-      includeAllReleases: HTMLInputElement,
-      resultsPanel: HTMLElement,
-      searchButton: HTMLButtonElement,
-      searchPanel: HTMLElement,
-      searchText: HTMLInputElement
+      clearButton: null, // HTMLButtonElement
+      includeAllReleases: null, // HTMLInputElement
+      resultsPanel: null, // HTMLElement
+      searchButton: null, // HTMLButtonElement
+      searchPanel: null, // HTMLElement
+      searchText: null // HTMLInputElement
    }
 
 
@@ -60,17 +62,7 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
    }
 
    // Initialize the object
-   this.initialize = async () => {
-
-      // Initialize the collection of DOM Elements.
-      self.elements = {
-         clearButton: null,
-         includeAllReleases: null,
-         resultsPanel: null,
-         searchButton: null,
-         searchPanel: null,
-         searchText: null
-      }
+   this.initialize = () => {
 
       //------------------------------------------------------------------------------------------------------
       // Search panel
@@ -81,14 +73,14 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
       // The HTML to add to the search panel.
       const html =
          `<div class="input-group search-controls">
-                <input type="text" class="form-control search-text" placeholder="Search current release..." />
-                <button class="btn search-button"><i class="fa fa-search"></i> Search</button>
-                <button class="btn clear-button"><i class="fa fa-times"></i> Reset</button>
-            </div>
-            <div class="all-releases-row">
-                <input type="checkbox" class="include-all-releases" />
-                <label>Include all ICTV releases</label></div>
-            </div>`;
+            <input type="text" class="form-control search-text" placeholder="Search current release..." spellcheck="false" />
+            <button class="btn search-button"><i class="fa fa-search"></i> Search</button>
+            <button class="btn clear-button"><i class="fa fa-times"></i> Reset</button>
+         </div>
+         <div class="all-releases-row">
+            <input type="checkbox" class="include-all-releases" />
+            <label>Include all ICTV releases</label></div>
+         </div>`;
 
       self.elements.searchPanel.innerHTML = html;
 
@@ -201,10 +193,10 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
          url: self.taxonomyURL,
          data: {
             action_code: "search_visual_taxonomy",
-            current_release: self.currentReleaseNumber,
+            current_release: self.releaseNumber.current,
             include_all_releases: includeAllReleases,
             search_text: searchText,
-            selected_release: null
+            selected_release: self.releaseNumber.selected
          },
          success: (data_) => {
             return data_;
@@ -268,7 +260,6 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
 
          event_.preventDefault();
          event_.stopImmediatePropagation();
-         // event_.stopPropagation();
 
          // Get the button's lineage attribute.
          const lineage = buttonEl.getAttribute("data-lineage");
@@ -293,7 +284,7 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
          searching: false
       });
 
-      return;
+      return self;
    }
 
 }

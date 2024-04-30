@@ -6,8 +6,9 @@ GO
 -- ==========================================================================================================
 -- Author: don dempsey
 -- Created on: 07/25/22
--- Description:	Export non-species taxon_json records as JSON for the specified treeID.
+-- Description:	Export non-species taxonomy_json records as JSON for the specified treeID.
 -- Updated: 02/21/23 dmd: names in the legend are now "Unassigned" instead of null.
+--          04/25/24 dmd: Renaming taxon_json to taxonomy_json and taxon_rank to taxonomy_json_rank.
 -- ==========================================================================================================
 
 -- Delete any existing versions.
@@ -22,7 +23,9 @@ AS
 BEGIN
 	SET XACT_ABORT, NOCOUNT ON
 
-	-- Create JSON for the "legend" (ordered rank data for this release)
+   --==========================================================================================================
+	-- Create JSON for the "legend" (ordered rank data for this release).
+   --==========================================================================================================
 	DECLARE @legendJSON AS VARCHAR(MAX) = (
 		SELECT STRING_AGG(rankJSON, '')
 		FROM (
@@ -40,29 +43,34 @@ BEGIN
 				'"taxNodeID":"legend",'+
 				'"children":[' AS rankJSON
 
-			FROM taxon_rank tr
+			FROM taxonomy_json_rank tr
 			WHERE tr.tree_id = @treeID
 			AND tr.rank_index > 0
 			ORDER BY tr.rank_index
 		) ranksJSON
 	)
 
-	-- Append "]}" for every non-tree taxonomy rank
+   --==========================================================================================================
+	-- Append "]}" for every non-tree taxonomy rank.
+   --==========================================================================================================
 	SET @legendJSON = @legendJSON + (
 		SELECT STRING_AGG(taxonEnd, '')
 		FROM (
 			SELECT ']}' AS taxonEnd
-			FROM taxon_rank tr
+			FROM taxonomy_json_rank tr
 			WHERE tr.tree_id = @treeID
 			AND tr.rank_index > 0
 		) taxonEnds
 	)
 
+   --==========================================================================================================
+   -- Return the JSON result.
+   --==========================================================================================================
 	SELECT TOP 1 json_result = '{' +
 		CAST(tj.json AS VARCHAR(MAX)) +
 		'"children":['+@legendJSON+','+ISNULL(CAST(tj.child_json AS VARCHAR(MAX)), '')+']'+
 		'}'
-	FROM taxon_json tj
+	FROM taxonomy_json tj
 	WHERE tj.tree_id = @treeID
 	AND tj.taxnode_id = @treeID
 

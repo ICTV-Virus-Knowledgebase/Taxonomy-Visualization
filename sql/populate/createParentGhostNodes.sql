@@ -7,7 +7,7 @@ GO
 -- Author: don dempsey
 -- Created on: 09/19/22
 -- Description: Create ghost nodes in the taxon JSON table between the tree node and top-level nodes.
--- Updated: 
+-- Updated: 04/25/24 dmd: Renaming taxon_json to taxonomy_json.
 -- ==========================================================================================================
 
 -- Delete any existing versions.
@@ -28,20 +28,20 @@ BEGIN
 	BEGIN TRY
 		
 		--==========================================================================================================
-		-- Get the taxon_json.id of the tree node
+		-- Get the taxonomy_json.id of the tree node
 		--==========================================================================================================
 		DECLARE @treeJsonID AS INT = (
 			SELECT TOP 1 id
-			FROM taxon_json tj
+			FROM taxonomy_json tj
 			WHERE tj.tree_id = @treeID
 			AND tj.rank_index = 0
 		)
-		IF @treeJsonID IS NULL THROW @errorCode, 'Invalid taxon_json.id for tree node', 1
+		IF @treeJsonID IS NULL THROW @errorCode, 'Invalid taxonomy_json.id for tree node', 1
 
       -- What is the maximum rank index among all non-ghost nodes that are directly under the tree node?
 		DECLARE @lowestRankToCreate AS INT = (
 			SELECT MAX(rank_index) - 1
-			FROM taxon_json
+			FROM taxonomy_json
 			WHERE parent_taxnode_id = @treeID	-- Direct children of the tree node
 			AND taxnode_id <> @treeID			   -- Exclude the tree node
 			AND tree_id = @treeID				   -- Constrain the tree ID
@@ -59,7 +59,7 @@ BEGIN
 		BEGIN
 			
 			-- Create a ghost node for this rank.
-			INSERT INTO taxon_json (
+			INSERT INTO taxonomy_json (
 				is_ghost_node,
 				parent_distance,
 				parent_taxnode_id,
@@ -79,7 +79,7 @@ BEGIN
 				@treeID
 			)
 	
-			-- The ID of the taxon_json record we just created.
+			-- The ID of the taxonomy_json record we just created.
 			SET @previousID = (SELECT SCOPE_IDENTITY() AS [SCOPE_IDENTITY])
 			
 			SET @currentRankIndex = @currentRankIndex + 1
@@ -99,7 +99,7 @@ BEGIN
 				notghost.id,
 				parent_id = (
 					SELECT TOP 1 id
-					FROM taxon_json ghost
+					FROM taxonomy_json ghost
 					WHERE ghost.is_ghost_node = 1
 					AND ghost.[source] = 'P' -- This is a "parent" ghost node
 					AND ghost.rank_index = notghost.rank_index - 1
@@ -107,7 +107,7 @@ BEGIN
 					AND ghost.tree_id = @treeID
 				)
 
-			FROM taxon_json notghost
+			FROM taxonomy_json notghost
 			WHERE notghost.parent_taxnode_id = @treeID	-- Child nodes of the tree node.
 			AND notghost.taxnode_id <> @treeID			-- Exclude the tree node
 			AND notghost.is_ghost_node = 0				-- No ghost nodes
@@ -121,7 +121,7 @@ BEGIN
 		BEGIN
 		
 			-- Connect the "top-level" node to its parent ghost node.
-			UPDATE taxon_json SET parent_id = @parentID WHERE id = @id
+			UPDATE taxonomy_json SET parent_id = @parentID WHERE id = @id
 			
 			FETCH NEXT FROM top_level_cursor INTO @id, @parentID
 		END 

@@ -1,0 +1,240 @@
+{
+   "data": {
+      "r2023": {
+         "year": "2023",
+         "rankCount": 12,
+         "releaseNum": 39
+      },
+      "r2022": {
+         "year": "2022",
+         "rankCount": 12,
+         "releaseNum": 38
+      },
+      "r2021": {
+         "year": "2021",
+         "rankCount": 12,
+         "releaseNum": 37
+      },
+      "r2020": {
+         "year": "2020",
+         "rankCount": 12,
+         "releaseNum": 36
+      },
+      "r2019": {
+         "year": "2019",
+         "rankCount": 12,
+         "releaseNum": 35
+      },
+      "r2018b": {
+         "year": "2018b",
+         "rankCount": 11,
+         "releaseNum": 34
+      },
+      "r2018a": {
+         "year": "2018a",
+         "rankCount": 10,
+         "releaseNum": 33
+      },
+      "r2017": {
+         "year": "2017",
+         "rankCount": 5,
+         "releaseNum": 32
+      },
+      "r2016": {
+         "year": "2016",
+         "rankCount": 5,
+         "releaseNum": 31
+      },
+      "r2015": {
+         "year": "2015",
+         "rankCount": 5,
+         "releaseNum": 30
+      },
+      "r2014": {
+         "year": "2014",
+         "rankCount": 5,
+         "releaseNum": 29
+      },
+      "r2013": {
+         "year": "2013",
+         "rankCount": 5,
+         "releaseNum": 28
+      },
+      "r2012": {
+         "year": "2012",
+         "rankCount": 5,
+         "releaseNum": 27
+      },
+      "r2011": {
+         "year": "2011",
+         "rankCount": 5,
+         "releaseNum": 26
+      },
+      "r2009": {
+         "year": "2009",
+         "rankCount": 5,
+         "releaseNum": 25
+      },
+      "r2008": {
+         "year": "2008",
+         "rankCount": 5,
+         "releaseNum": 24
+      },
+      "r2007": {
+         "year": "2007",
+         "rankCount": 5,
+         "releaseNum": 23
+      },
+      "r2004": {
+         "year": "2004",
+         "rankCount": 5,
+         "releaseNum": 22
+      },
+      "r2002b": {
+         "year": "2002b",
+         "rankCount": 5,
+         "releaseNum": 21
+      },
+      "r2002a": {
+         "year": "2002a",
+         "rankCount": 5,
+         "releaseNum": 20
+      },
+      "r1999b": {
+         "year": "1999b",
+         "rankCount": 5,
+         "releaseNum": 19
+      },
+      "r1999a": {
+         "year": "1999a",
+         "rankCount": 5,
+         "releaseNum": 18
+      },
+      "r1998": {
+         "year": "1998",
+         "rankCount": 5,
+         "releaseNum": 17
+      },
+      "r1997": {
+         "year": "1997",
+         "rankCount": 5,
+         "releaseNum": 16
+      },
+      "r1996": {
+         "year": "1996",
+         "rankCount": 5,
+         "releaseNum": 15
+      },
+      "r1995": {
+         "year": "1995",
+         "rankCount": 5,
+         "releaseNum": 14
+      },
+      "r1993": {
+         "year": "1993",
+         "rankCount": 5,
+         "releaseNum": 13
+      },
+      "r1991": {
+         "year": "1991",
+         "rankCount": 5,
+         "releaseNum": 12
+      },
+      "r1990": {
+         "year": "1990",
+         "rankCount": 5,
+         "releaseNum": 11
+      },
+      "r1987": {
+         "year": "1987",
+         "rankCount": 4,
+         "releaseNum": 10
+      },
+      "r1984": {
+         "year": "1984",
+         "rankCount": 4,
+         "releaseNum": 9
+      },
+      "r1982": {
+         "year": "1982",
+         "rankCount": 4,
+         "releaseNum": 8
+      },
+      "r1981": {
+         "year": "1981",
+         "rankCount": 4,
+         "releaseNum": 7
+      },
+      "r1979": {
+         "year": "1979",
+         "rankCount": 4,
+         "releaseNum": 6
+      },
+      "r1978": {
+         "year": "1978",
+         "rankCount": 4,
+         "releaseNum": 5
+      },
+      "r1976": {
+         "year": "1976",
+         "rankCount": 4,
+         "releaseNum": 4
+      },
+      "r1975": {
+         "year": "1975",
+         "rankCount": 4,
+         "releaseNum": 3
+      },
+      "r1974": {
+         "year": "1974",
+         "rankCount": 3,
+         "releaseNum": 2
+      },
+      "r1971": {
+         "year": "1971",
+         "rankCount": 3,
+         "releaseNum": 1
+      }
+   },
+   "displayOrder": [
+      "r2023",
+      "r2022",
+      "r2021",
+      "r2020",
+      "r2019",
+      "r2018b",
+      "r2018a",
+      "r2017",
+      "r2016",
+      "r2015",
+      "r2014",
+      "r2013",
+      "r2012",
+      "r2011",
+      "r2009",
+      "r2008",
+      "r2007",
+      "r2004",
+      "r2002b",
+      "r2002a",
+      "r1999b",
+      "r1999a",
+      "r1998",
+      "r1997",
+      "r1996",
+      "r1995",
+      "r1993",
+      "r1991",
+      "r1990",
+      "r1987",
+      "r1984",
+      "r1982",
+      "r1981",
+      "r1979",
+      "r1978",
+      "r1976",
+      "r1975",
+      "r1974",
+      "r1971"
+   ]
+}

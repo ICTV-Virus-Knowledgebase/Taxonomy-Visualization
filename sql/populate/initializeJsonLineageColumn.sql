@@ -6,8 +6,8 @@ GO
 -- ==========================================================================================================
 -- Author: don dempsey
 -- Created on: 07/19/23
--- Description: Initialize the taxon_json.json_lineage column
--- Updated: 
+-- Description: Initialize the taxonomy_json.json_lineage column
+-- Updated: 04/25/24 dmd: Renaming taxon_json to taxonomy_json
 -- ==========================================================================================================
 
 -- Delete any existing versions.
@@ -34,8 +34,8 @@ BEGIN
 			tj.id,
 			parentTJ.json_lineage AS parent_lineage
 
-		FROM taxon_json tj
-		LEFT JOIN taxon_json parentTJ ON parentTJ.id = tj.parent_id
+		FROM taxonomy_json tj
+		LEFT JOIN taxonomy_json parentTJ ON parentTJ.id = tj.parent_id
 		WHERE tj.tree_id = @treeID
 		ORDER BY tj.rank_index ASC
 
@@ -52,7 +52,7 @@ BEGIN
          SET @parentLineage = ''
 			
 		-- Populate the node's JSON lineage with its parent lineage and it's own ID.
-		UPDATE taxon_json SET json_lineage = @parentLineage+CAST(@id AS VARCHAR(12))
+		UPDATE taxonomy_json SET json_lineage = @parentLineage+CAST(@id AS VARCHAR(12))
 		WHERE id = @id
 
 		FETCH NEXT FROM ranked_node_cursor INTO @id, @parentLineage
@@ -60,5 +60,4 @@ BEGIN
 
 	CLOSE ranked_node_cursor  
 	DEALLOCATE ranked_node_cursor 
-
 END

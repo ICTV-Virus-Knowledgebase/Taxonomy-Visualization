@@ -7,7 +7,8 @@ GO
 -- Author: don dempsey
 -- Created on: 09/22/22
 -- Description: Create intermediate and parent ghost nodes.
--- Updated: dmd 03/09/23 Added species rank index parameter to pass to createIntermediateGhostNodes.
+-- Updated: 03/09/23 dmd: Added species rank index parameter to pass to createIntermediateGhostNodes.
+--          04/25/24 dmd: Renaming taxon_json to taxonomy_json.
 -- ===================================================================================================================
 
 -- Delete any existing versions.
@@ -16,7 +17,7 @@ IF OBJECT_ID('dbo.createGhostNodes') IS NOT NULL
 GO
 
 CREATE PROCEDURE dbo.createGhostNodes
-    @speciesRankIndex AS INT,
+   @speciesRankIndex AS INT,
 	@treeID AS INT
 
 AS
@@ -51,7 +52,7 @@ BEGIN
 				rank_index,
 				taxnode_id
 
-			FROM taxon_json tj
+			FROM taxonomy_json tj
 			WHERE tj.tree_id = @treeID
 			AND tj.is_ghost_node = 0
 			AND tj.rank_index < @speciesRankIndex
@@ -72,7 +73,7 @@ BEGIN
 				@parentID = @id,
 				@parentRankIndex = @rankIndex,
 				@parentTaxnodeID = @taxNodeID,
-                @speciesRankIndex = @speciesRankIndex,
+            @speciesRankIndex = @speciesRankIndex,
 				@treeID = @treeID
 
 			FETCH NEXT FROM taxon_cursor INTO @childCounts, @id, @rankIndex, @taxNodeID

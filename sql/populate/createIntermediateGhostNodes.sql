@@ -6,8 +6,9 @@ GO
 -- ===================================================================================================================
 -- Author: don dempsey
 -- Created on: 09/19/22
--- Description: Create intermediate ghost nodes for a taxon and its immediate children in the taxon_json table.
--- Updated: dmd 03/09/23 Added species rank index parameter which is used to limit max child rank index.
+-- Description: Create intermediate ghost nodes for a taxon and its immediate children in the taxonomy_json table.
+-- Updated: 03/09/23 dmd: Added species rank index parameter which is used to limit max child rank index.
+--          04/25/24 dmd: Renaming taxon_json to taxonomy_json.
 -- ===================================================================================================================
 
 -- Delete any existing versions.
@@ -39,10 +40,10 @@ BEGIN
 		--==========================================================================================================
 		DECLARE @maxChildRankIndex AS INT = (
 			SELECT MAX(rank_index)
-			FROM taxon_json tj
+			FROM taxonomy_json tj
 			WHERE tj.parent_taxnode_id = @parentTaxnodeID
-			AND tj.is_ghost_node = 0
-            AND tj.rank_index < @speciesRankIndex
+         AND tj.is_ghost_node = 0
+         AND tj.rank_index < @speciesRankIndex
 
 			-- If the node is immediately below the parent node, there's no need for an intermediate ghost node.
 			AND tj.rank_index > @parentRankIndex + 1 
@@ -65,7 +66,7 @@ BEGIN
 		WHILE @currentRankIndex < @maxChildRankIndex
 		BEGIN
 			
-			INSERT INTO taxon_json (
+			INSERT INTO taxonomy_json (
 				child_counts,
 				is_ghost_node,
 				parent_distance,
@@ -87,7 +88,7 @@ BEGIN
 				@treeID
 			)
 	
-			-- The ID of the taxon_json record we just created.
+			-- The ID of the taxonomy_json record we just created.
 			SET @currentID = (SELECT SCOPE_IDENTITY() AS [SCOPE_IDENTITY])
 			SET @previousID = @currentID
 
@@ -110,7 +111,7 @@ BEGIN
 				rank_index,
 				taxnode_id
 
-			FROM taxon_json tj
+			FROM taxonomy_json tj
 			WHERE tj.parent_taxnode_id = @parentTaxnodeID
 			AND tj.is_ghost_node = 0
 			AND tj.rank_index > @parentRankIndex + 1
@@ -125,9 +126,9 @@ BEGIN
 			--==========================================================================================================
 			-- Update the child to point to a newly-created ghost node.
 			--==========================================================================================================
-			UPDATE taxon_json SET parent_id = (
+			UPDATE taxonomy_json SET parent_id = (
 				SELECT TOP 1 id
-				FROM taxon_json
+				FROM taxonomy_json
 				WHERE parent_taxnode_id = @parentTaxnodeID
 				AND is_ghost_node = 1
 				AND rank_index = @childRankIndex - 1

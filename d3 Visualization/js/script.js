@@ -25,9 +25,6 @@ window.ICTV.d3TaxonomyVisualization = function (
    taxonomyURL_
 ) {
 
-   // Maintain a copy of "this" to avoid scope ambiguity.
-   const self = this;
-
    // Validate input parameters
    if (!containerSelector_) { throw new Error("Invalid container selector"); }
    const containerSelector = containerSelector_;
@@ -47,6 +44,7 @@ window.ICTV.d3TaxonomyVisualization = function (
    if (!taxonomyURL_) { throw new Error("Invalid taxonomy web service URL"); }
    const taxonomyURL = taxonomyURL_;
 
+   
    // Configuration settings (to replace hard-coded values below)
    const settings = {
       animationDuration: 900,
@@ -125,10 +123,12 @@ window.ICTV.d3TaxonomyVisualization = function (
    // This will be populated with a release's species data.
    let speciesData = null;
 
-   // Initialize the search panel object.
+   // Create an instance of the search panel object and initialize it.
    const searchPanel = new window.ICTV.SearchPanel(currentReleaseNumber, selectSearchResult, `${containerSelector} .search-results-panel`,
-      `${containerSelector} .search-panel`, taxonomyURL);
+   `${containerSelector} .search-panel`, taxonomyURL);
+
    searchPanel.initialize();
+
 
    // Initialize the font size slider and its label.
    initializeFontSizePanel();
@@ -142,7 +142,7 @@ window.ICTV.d3TaxonomyVisualization = function (
    // Initialize the release control using MSL release data.
    initializeReleaseControl();
 
-
+   
    // Clear the contents of the species panel.
    function clearSpeciesPanel() {
       speciesParentEl.innerHTML = "";
@@ -231,6 +231,7 @@ window.ICTV.d3TaxonomyVisualization = function (
 
    // TODO: What button? Give this a better name!
    function initializeButton() {
+
       // Get a reference to the panel Element.
       let buttonE1 = document.querySelector(`${containerSelector} .font-size-panel`);
       if (!buttonE1) { throw new Error("Invalid font size panel Element"); }
@@ -239,8 +240,8 @@ window.ICTV.d3TaxonomyVisualization = function (
       let buttonClickE1 = d3
          .select(`${containerSelector} .font-size-panel`)
          .append("button")
-         .attr("class", "label")
-         .text("Take a screenshot");
+         .attr("class", "screenshot-button")
+         .html(`<i class="fa fa-camera"></i> Screenshot`);
 
       // Create a dropdown for format selection.
       let selectFormat = d3.select(`${containerSelector} .font-size-panel`)
@@ -341,9 +342,10 @@ window.ICTV.d3TaxonomyVisualization = function (
    }
 
 
-
+   /*
    let zoom = d3.zoom()
       .on("zoom", function (event) {
+         console.log("in d3.zoom on zoom")
          d3.select(`${containerSelector} .taxonomy-panel svg g`)
             .attr("transform", event.transform);
       });
@@ -358,7 +360,7 @@ window.ICTV.d3TaxonomyVisualization = function (
       .call(zoom.scaleBy, settings.zoom.scaleFactor)
       .call(zoom)
       .on("dblclick.zoom", null);
-
+   */
 
    // Use the release year to lookup and return the corresponding release data.
    function getRelease(releaseYear) {
@@ -381,7 +383,7 @@ window.ICTV.d3TaxonomyVisualization = function (
          .select(".font-size-panel")
          .append("div")
          .attr("class", "label")
-         .text("Zoom Slider");
+         .text("Zoom");
 
       ZoomSliderEl = d3
          .select(".font-size-panel")
@@ -458,7 +460,7 @@ window.ICTV.d3TaxonomyVisualization = function (
       releaseControlEl.innerHTML = null;
 
       // Add an option for each release year.
-      releases.displayOrder.forEach(async (releaseKey_) => {
+      releases.displayOrder.forEach((releaseKey_) => {
 
          // Get the release corresponding to this release key. Note that a release 
          // key is the release year prefaced by "r".
@@ -471,11 +473,10 @@ window.ICTV.d3TaxonomyVisualization = function (
          option.value = release.year;
 
          releaseControlEl.appendChild(option);
-         return;
       })
 
       // Add a "change" event handler
-      releaseControlEl.addEventListener("change", (e_) => {
+      releaseControlEl.addEventListener("change", async (e_) => {
 
          const releaseYear = e_.target.value;
          if (!releaseYear) { throw new Error("Invalid release control value"); }
@@ -484,11 +485,14 @@ window.ICTV.d3TaxonomyVisualization = function (
          const release = getRelease(releaseYear);
          if (!release) { throw new Error(`No release data available for release year ${releaseYear}`) }
 
+         // Update the search panel's selected release.
+         searchPanel.releaseNumber.selected = release.releaseNum;
+
          // Clear the species panel
          clearSpeciesPanel();
 
          // Display the taxonomy of the selected release.
-         displayReleaseTaxonomy(releaseYear);
+         await displayReleaseTaxonomy(releaseYear);
 
          // Make sure the font size panel is visible.
          if (!!fontSizePanelEl && fontSizePanelEl.classList.contains("hide")) {
@@ -496,8 +500,7 @@ window.ICTV.d3TaxonomyVisualization = function (
             fontSizePanelEl.classList.add("show");
          }
 
-         // Update the search panel's current release.
-         searchPanel.currentRelease = release.releaseNumber;
+         return;
       });
 
       // Select the most recent release.
@@ -554,7 +557,6 @@ window.ICTV.d3TaxonomyVisualization = function (
             } else {
                do {
                   let str = d.child_counts;
-                  // console.log("STR",str,d.data.name);
                   var result;
                   const regex = /(\d+)/;
                   if (typeof str === "string" && str.length > 0) {
@@ -582,7 +584,6 @@ window.ICTV.d3TaxonomyVisualization = function (
                return d.children;
             }
          });
-         //console.log("NUM", max);
       });
 
       d3.json(nonSpeciesFilename).then(function (data) {
@@ -628,37 +629,35 @@ window.ICTV.d3TaxonomyVisualization = function (
 
          // TODO: Consider renaming "ds" to "root"
          const ds = d3.hierarchy(data, function (d) {
-            if (d.children === null) {
-               // console.log("NA")
-            } else {
-               do {
-                  let str = d.child_counts;
-                  // console.log("STR",str,d.data.name);
-                  var result;
-                  const regex = /(\d+)/;
-                  if (typeof str === "string" && str.length > 0) {
-                     if (str.includes("species")) {
-                        result = str.replace(/, .*species|,.*$/, "");
-                     } else {
-                        result = str?.match(regex);
+            
+            if (d.children === null) { return; }
+            
+            do {
+               let str = d.child_counts;
+               var result;
+               const regex = /(\d+)/;
+               if (typeof str === "string" && str.length > 0) {
+                  if (str.includes("species")) {
+                     result = str.replace(/, .*species|,.*$/, "");
+                  } else {
+                     result = str?.match(regex);
+                  }
+               }
+               if (typeof result === "string" && result.length > 0) {
+                  num = parseInt(result.match(/\d+/)[0]);
+                  if (num > 500) {
+                     num = temp;
+                  } else {
+                     if (num > temp) {
+                        arr.push(temp);
+                        temp = num;
                      }
                   }
-                  if (typeof result === "string" && result.length > 0) {
-                     num = parseInt(result.match(/\d+/)[0]);
-                     if (num > 500) {
-                        num = temp;
-                     } else {
-                        if (num > temp) {
-                           arr.push(temp);
-                           temp = num;
-                        }
-                     }
-                  }
-               } while (num > 1000);
-               const max = Math.max(...arr);
-               num_flag = true;
-               return d.children;
-            }
+               }
+            } while (num > 1000);
+            const max = Math.max(...arr);
+            num_flag = true;
+            return d.children;
          });
 
          // Create and populate the tree structure.
@@ -679,6 +678,14 @@ window.ICTV.d3TaxonomyVisualization = function (
                   "transform",
                   `translate(${settings.svg.margin.left},${settings.svg.margin.top})`
                );
+
+            let zoom = d3.zoom()
+               // .05: Zoom out to 5% of the original size
+               // .5: Zoom in to .5 times the original size
+               .scaleExtent([0.05, .5])
+               .on("zoom", function (event) {
+                  svg.attr("transform", event.transform);
+               });
 
             var svg_zoom = d3
                .select(`${containerSelector} .taxonomy-panel svg`)
@@ -702,8 +709,6 @@ window.ICTV.d3TaxonomyVisualization = function (
             //ds.y0 = -100;
 
             function pageNodes(d, maxNode) {
-
-               // console.log("MAX", max);
 
                if (d.children) {
                   d.children.forEach((c) => pageNodes(c, maxNode));
@@ -1380,6 +1385,8 @@ window.ICTV.d3TaxonomyVisualization = function (
          }
 
       });
+
+      return;
    }
 
    function collapse(d) {

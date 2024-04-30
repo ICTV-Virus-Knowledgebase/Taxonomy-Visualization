@@ -6,10 +6,11 @@ GO
 -- ==========================================================================================================
 -- Author: don dempsey
 -- Created on: 09/21/22
--- Description: Initialize the taxon_json.json column
+-- Description: Initialize the taxonomy_json.json column
 -- Updated: 04/20/23 dmd: Now displaying "" instead of null in child_counts.
---          07/19/23 dmd: Included "json_id" attribute in JSON column (taxon_json.id), 
---                        Replaced specific references to an ICTVonline* db with views. 
+--          07/19/23 dmd: Included "json_id" attribute in JSON column (taxonomy_json.id), 
+--                        Replaced specific references to an ICTVonline* db with views.
+--          04/25/24 dmd: Renaming taxon_json to taxonomy_json, replacing views with ICTV tables. 
 -- ==========================================================================================================
 
 -- Delete any existing versions.
@@ -25,7 +26,7 @@ BEGIN
 	SET XACT_ABORT, NOCOUNT ON
 
 	--==========================================================================================================
-	-- Populate the JSON column of every taxon_json record.
+	-- Populate the JSON column of every taxonomy_json record.
 	--==========================================================================================================
 	UPDATE tj SET [json] = 
 		'"child_counts":'+CASE
@@ -53,12 +54,12 @@ BEGIN
 			WHEN tj.taxnode_id IS NULL THEN 'null' ELSE CAST(tj.taxnode_id AS VARCHAR(12))
 		END +','
 
-	FROM taxon_json tj
-	JOIN taxon_rank tr ON (
+	FROM taxonomy_json tj
+	JOIN taxonomy_json_rank tr ON (
 		tr.rank_index = tj.rank_index
 		AND tr.tree_id = @treeID
 	)
-	LEFT JOIN v_taxonomy_node tn ON tn.taxnode_id = tj.taxnode_id
+	LEFT JOIN taxonomy_node tn ON tn.taxnode_id = tj.taxnode_id
 	WHERE tj.tree_id = @treeID
 
 	
@@ -77,7 +78,7 @@ BEGIN
 			tj.rank_index,
 			tj.taxnode_id
 
-		FROM taxon_json tj
+		FROM taxonomy_json tj
 		WHERE tj.rank_index < @speciesRankIndex
 		AND tj.tree_id = @treeID
 		ORDER BY tj.rank_index DESC
@@ -88,7 +89,7 @@ BEGIN
 	WHILE @@FETCH_STATUS = 0  
 	BEGIN
 
-		-- Populate the taxon_json's "child JSON"
+		-- Populate the taxonomy_json's "child JSON"
 		DECLARE @childJSON AS NVARCHAR(MAX) = (
 			SELECT child_json = STRING_AGG(nodeJSON, ',')
 			FROM (
@@ -105,8 +106,8 @@ BEGIN
 						ELSE '['+tj.child_json+']'
 					END +
 				'}'
-				FROM taxon_json tj
-				LEFT JOIN v_taxonomy_node tn ON tn.taxnode_id = tj.taxnode_id
+				FROM taxonomy_json tj
+				LEFT JOIN taxonomy_node tn ON tn.taxnode_id = tj.taxnode_id
 				WHERE tj.parent_id = @id
 				AND tj.tree_id = @treeID
 				AND tj.rank_index < @speciesRankIndex
@@ -117,12 +118,12 @@ BEGIN
 			) childJSON
 		)
 
-		-- Update the taxon_json's child JSON column.
-		UPDATE taxon_json SET child_json = @childJSON WHERE id = @id
+		-- Update the taxonomy_json's child JSON column.
+		UPDATE taxonomy_json SET child_json = @childJSON WHERE id = @id
 
 
 		--==========================================================================================================
-		-- Populate the taxon_json's "species JSON"
+		-- Populate the taxonomy_json's "species JSON"
 		--==========================================================================================================
 		DECLARE @speciesJSON AS NVARCHAR(MAX) = (
 			SELECT species_json = STRING_AGG(nodeJSON, ',')
@@ -131,8 +132,8 @@ BEGIN
 					WHEN speciesTJ.taxnode_id IS NULL THEN NULL
 					ELSE '{'+speciesTJ.json+'"children":null}'
 				END
-				FROM taxon_json speciesTJ
-				JOIN v_taxonomy_node tn ON (
+				FROM taxonomy_json speciesTJ
+				JOIN taxonomy_node tn ON (
 					tn.taxnode_id = speciesTJ.taxnode_id
 					AND tn.tree_id = speciesTJ.tree_id -- Probably unnecessary...
 				)
@@ -145,8 +146,10 @@ BEGIN
 
 		IF LEN(@speciesJSON) > 0 SET @speciesJSON = '['+@speciesJSON+']' ELSE SET @speciesJSON = NULL
  
-		-- Update the taxon_json's species JSON column.
-		UPDATE taxon_json SET species_json = @speciesJSON WHERE id = @id
+      --==========================================================================================================
+		-- Update the taxonomy_json's species JSON column.
+      --==========================================================================================================
+		UPDATE taxonomy_json SET species_json = @speciesJSON WHERE id = @id
 
 
 		FETCH NEXT FROM ranked_node_cursor INTO @id, @rankIndex, @taxNodeID
@@ -154,5 +157,4 @@ BEGIN
 
 	CLOSE ranked_node_cursor  
 	DEALLOCATE ranked_node_cursor 
-
 END
