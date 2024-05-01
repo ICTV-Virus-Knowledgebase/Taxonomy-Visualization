@@ -2,7 +2,8 @@
 // Create the ICTV namespace if it doesn't already exist.
 if (!window.ICTV) { window.ICTV = {}; }
 
-window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallback_, resultsSelector_, searchPanelSelector_, taxonomyURL_) {
+window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallback_, resultsSelector_, searchPanelSelector_, 
+   taxonHistoryPage_, taxonomyURL_) {
 
    // Maintain a copy of "this" to avoid scope ambiguity.
    const self = this;
@@ -27,6 +28,9 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
 
    if (!searchPanelSelector_) { throw new Error(`${this.errorPrefix} Invalid search panel selector parameter`); }
    this.searchPanelSelector = searchPanelSelector_;
+
+   if (!taxonHistoryPage_) { throw new Error(`${this.errorPrefix} Invalid taxon history page parameter`); }
+   this.taxonHistoryPage = taxonHistoryPage_;
 
    if (!taxonomyURL_) { throw new Error(`${this.errorPrefix} Invalid taxonomy URL parameter`); }
    this.taxonomyURL = taxonomyURL_;
@@ -220,23 +224,26 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
          `<table class="search-results-table cell-border compact stripe">
             <thead>
                <tr class="header-row">
-                  <th data-orderable="false"></th>
+                  <th class="controls-column" data-orderable="false"></th>
                   <th>Release</th>
                   <th>Rank</th>
                   <th>Name</th>
                </tr>
             </thead>
             <tbody>`;
-   
+
       // Add a table row for every search result.
       searchResults.forEach((searchResult_) => {
          html +=
             `<tr>
-               <td class="view-ctrl">
-                  <button class="slim-btn view-search-result-ctrl"
+               <td class="controls-column">
+                  <button class="slim-btn view-search-result-button"
                      data-id="${searchResult_.jsonID}" 
                      data-lineage="${searchResult_.jsonLineage}" 
                      data-release="${searchResult_.treeName}">View</button>
+                  <button class="slim-btn view-history-button"
+                     data-id="${searchResult_.taxnodeID}" 
+                     data-name="${searchResult_.name}">History</button>
                </td>
                <td class="release-name">${searchResult_.treeName}</td>
                <td class="level-name">${searchResult_.rankName}</td>
@@ -258,27 +265,48 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
          const buttonEl = event_.target.closest("button");
          if (!buttonEl) { return; }
 
+         // Is this the view button or the history button?
+         if (buttonEl.classList.contains("view-search-result-button")) {
+
+            // Get the button's lineage attribute.
+            const lineage = buttonEl.getAttribute("data-lineage");
+            if (!lineage) { return self.createError("Invalid lineage"); }
+
+            const releaseNumber = buttonEl.getAttribute("data-release");
+            if (!releaseNumber) { return self.createError("Invalid releaseNumber attribute"); }
+
+            const jsonID = buttonEl.getAttribute("data-id");
+            if (!jsonID) { return self.createError("Invalid data-id attribute"); }
+
+            // Pass the lineage and release number to the result selection callback.
+            self.resultSelectionCallback(event_, lineage, releaseNumber, jsonID);
+
+         } else if (buttonEl.classList.contains("view-history-button")) {
+            
+            // Get the taxnode_id.
+            const taxNodeID = buttonEl.getAttribute("data-id");
+            if (!taxNodeID) { return self.createError("Invalid data-id attribute"); }
+
+            // Get the taxon name
+            const taxonName = buttonEl.getAttribute("data-name");
+            if (!taxonName) { throw new Error("Invalid taxon name"); }
+
+            // Open a new tab containing the taxon history page.
+            window.open(`${self.taxonHistoryPage}?taxnode_id=${taxNodeID}&taxon_name=${taxonName}`, "_blank");
+
+         } else { return; }
+
          event_.preventDefault();
          event_.stopImmediatePropagation();
-
-         // Get the button's lineage attribute.
-         const lineage = buttonEl.getAttribute("data-lineage");
-         if (!lineage) { return self.createError("Invalid lineage"); }
-
-         const releaseNumber = buttonEl.getAttribute("data-release");
-         if (!releaseNumber) { return self.createError("Invalid releaseNumber attribute"); }
-
-         const ID = buttonEl.getAttribute("data-id");
-         if (!ID) { return self.createError("Invalid data-id attribute"); }
-
-         // Pass the lineage and release number to the result selection callback.
-         self.resultSelectionCallback(event_, lineage, releaseNumber, ID);
 
          return false;
       })
 
       // Convert the table into a DataTable instance.
       jQuery(`${self.resultsSelector} .search-results-table`).DataTable({
+         columnDefs: [
+            { width: "130px", targets: 0 }
+         ],
          dom: "ltip",
          "order": [], // No ordering is applied by DataTables during initialisation.
          searching: false

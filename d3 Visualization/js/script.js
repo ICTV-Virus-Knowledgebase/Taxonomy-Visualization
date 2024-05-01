@@ -8,7 +8,7 @@ if (!window.tippy) {
       window.tippy = tippy;
    } else {
       // Since tippy.js isn't available, add a dummy delegate function so tooltips will fail gracefully.
-      console.log("Unable to find the tippy.js library");
+      console.error("Unable to find the tippy.js library");
       window.tippy = {
          delegate: function (dummyOne, dummyTwo) { }
       };
@@ -125,7 +125,7 @@ window.ICTV.d3TaxonomyVisualization = function (
 
    // Create an instance of the search panel object and initialize it.
    const searchPanel = new window.ICTV.SearchPanel(currentReleaseNumber, selectSearchResult, `${containerSelector} .search-results-panel`,
-   `${containerSelector} .search-panel`, taxonomyURL);
+   `${containerSelector} .search-panel`, taxonDetailsURL, taxonomyURL);
 
    searchPanel.initialize();
 
@@ -258,7 +258,7 @@ window.ICTV.d3TaxonomyVisualization = function (
 
       // Click on button to get screenshot.
       buttonClickE1.on("click", function (e) {
-         console.log('clicked ss');
+
          const selectedFormat = selectFormat.node().value;
 
          // Get references to taxonomy and species panels.
@@ -341,11 +341,8 @@ window.ICTV.d3TaxonomyVisualization = function (
       );
    }
 
-
-   /*
    let zoom = d3.zoom()
       .on("zoom", function (event) {
-         console.log("in d3.zoom on zoom")
          d3.select(`${containerSelector} .taxonomy-panel svg g`)
             .attr("transform", event.transform);
       });
@@ -360,7 +357,7 @@ window.ICTV.d3TaxonomyVisualization = function (
       .call(zoom.scaleBy, settings.zoom.scaleFactor)
       .call(zoom)
       .on("dblclick.zoom", null);
-   */
+
 
    // Use the release year to lookup and return the corresponding release data.
    function getRelease(releaseYear) {
@@ -435,10 +432,7 @@ window.ICTV.d3TaxonomyVisualization = function (
       // changing the font on change of slider
       fontSliderEl.on("input", function (e) {
          const fontSize = e.target.value;
-         // console.log("FONT_SIZE",(e.target.value/2));
-         console.log("FONT", fontSize);
          font = fontSize + "rem";
-         console.log("FOnt", font);
 
          // Constrain the font size change to the taxonomy panel.
          const treeTextSelector = `${containerSelector} .taxonomy-panel text`;
@@ -552,37 +546,35 @@ window.ICTV.d3TaxonomyVisualization = function (
       // Load the non-species data for this release.
       d3.json(nonSpeciesFilename).then(function (data) {
          const ab = d3.hierarchy(data, function (d) {
-            if (d.children === null) {
-               // console.log("NA")
-            } else {
-               do {
-                  let str = d.child_counts;
-                  var result;
-                  const regex = /(\d+)/;
-                  if (typeof str === "string" && str.length > 0) {
-                     if (str.includes("species")) {
-                        result = str.replace(/, .*species|,.*$/, "");
-                     } else {
-                        result = str?.match(regex);
-                     }
-                  }
-                  if (typeof result === "string" && result.length > 0) {
-                     num = parseInt(result.match(/\d+/)[0]);
-                     if (num > 500) {
-                        num = temp;
-                     } else {
-                        if (num > temp) {
-                           arr.push(temp);
-                           temp = num;
-                        }
-                     }
-                  }
-               } while (num >= 1000);
-               max = Math.max(...arr);
+            if (d.children === null) { return; }
 
-               num_flag = true;
-               return d.children;
-            }
+            do {
+               let str = d.child_counts;
+               var result;
+               const regex = /(\d+)/;
+               if (typeof str === "string" && str.length > 0) {
+                  if (str.includes("species")) {
+                     result = str.replace(/, .*species|,.*$/, "");
+                  } else {
+                     result = str?.match(regex);
+                  }
+               }
+               if (typeof result === "string" && result.length > 0) {
+                  num = parseInt(result.match(/\d+/)[0]);
+                  if (num > 500) {
+                     num = temp;
+                  } else {
+                     if (num > temp) {
+                        arr.push(temp);
+                        temp = num;
+                     }
+                  }
+               }
+            } while (num >= 1000);
+
+            max = Math.max(...arr);
+            num_flag = true;
+            return d.children; 
          });
       });
 
@@ -752,8 +744,10 @@ window.ICTV.d3TaxonomyVisualization = function (
 
 
             function update(source) {
+
                if (!source) {
-                  console.log("in update and source is invalid");
+                  console.error("in update and source is invalid");
+                  return;
                }
 
                var info = treeLayout(ds);
@@ -763,7 +757,6 @@ window.ICTV.d3TaxonomyVisualization = function (
                const dx = 21 * scaleFactor;
                const dy = settings.svg.height / (currentNodeCount + 1);
                treeLayout.nodeSize([dx, dy]);
-               //console.log("CURR", currentNodeCount / max);
                links = info.descendants().slice(1);
                const treeNodes = treeLayout(ds);
                treeNodes.each((d) => {
@@ -773,15 +766,11 @@ window.ICTV.d3TaxonomyVisualization = function (
                });
 
                parent.forEach(function (d) {
-                  // console.log(rankCount);
                   var h = settings.svg.height / 125;
                   var w = (settings.svg.width * 5) / rankCount;
-
-                  // /var g=availableWidth/rankCount;
-                  // var h=d.data.rankIndex*f;
-                  // console.log("STR",d.data.child_counts);
+d
                   let str = d.data.child_counts;
-                  // console.log("STR",str,d.data.name);
+                  
                   var result;
                   const regex = /(\d+)/;
                   if (typeof str === "string" && str.length > 0) {
@@ -793,7 +782,6 @@ window.ICTV.d3TaxonomyVisualization = function (
                   }
                   if (typeof result === "string" && result.length > 0) {
                      num = parseInt(result.match(/\d+/)[0]);
-                     //console.log(num);
                   }
 
                   d.x = d.x * h;
@@ -987,8 +975,6 @@ window.ICTV.d3TaxonomyVisualization = function (
                      // TODO: why is the value reset here?
                      fontSliderEl.attr("value", 4);
 
-                     // console.log("in click d = ", d, num);
-
                      if (!d.data.name || d.data.name.length < 1 || d.data.name === "Unassigned" ||
                         !d.data.rankName || d.data.rankName.length < 1 ||
                         !d.data.taxNodeID || isNaN(parseInt(d.data.taxNodeID)) ||
@@ -1000,7 +986,6 @@ window.ICTV.d3TaxonomyVisualization = function (
                      } else {
 
                         // Populate the species panel
-                        console.log("name", d.data.name, "rank", d.data.rankName, "taxnode", d.data.taxNodeID);
                         return displaySpecies(d.data.name, d.data.rankName, d.data.taxNodeID);
                      }
                   })
@@ -1302,7 +1287,6 @@ window.ICTV.d3TaxonomyVisualization = function (
                }
 
                function click(event, d) {
-                  console.log("click", d.data.name)
                   selected = d.data.name;
                   if (d.data.taxNodeID !== "legend") {
                      if (d.hasOwnProperty("page")) {
@@ -1394,20 +1378,15 @@ window.ICTV.d3TaxonomyVisualization = function (
 
          if (d.data.name === name && counter < len - 1) {
             counter++;
-            console.log("hii", name, d.data.name);
             for (var i = 0; i < 1; i++) {
                var open = d.children[i];
-               console.log(d.children)
                name = res[counter]
                if (d.children) {
                   d.children.forEach(collapse);
-
                }
                return;
             }
-         }
-         else {
-
+         } else {
 
             if (
                d.data.name === "Unassigned" &&
@@ -1464,70 +1443,56 @@ window.ICTV.d3TaxonomyVisualization = function (
    // passed as a parameter to the search panel object's "constructor".
    function selectSearchResult(event_, lineage_, releaseNumber_, ID_) {
 
-      // dmd testing 
-      console.log(`in selectSearchResult, lineage = ${lineage_}, release number = ${releaseNumber_}, ID = ${ID_}, and event = `, event_)
-
       // Select the specified release.
       releaseControlEl.value = releaseNumber_;
       releaseControlEl.dispatchEvent(new Event("change"));
 
-
-      // dmd testing 03/07/24
+      // Trigger a click on the clear button.
       const clearButtonEl = document.querySelector(".search-panel .clear-button");
       if (!clearButtonEl) { throw new Error("Invalid clear button element"); }
-
-      console.log("clearButtonEl = ", clearButtonEl)
 
       clearButtonEl.dispatchEvent(new Event("click"));
 
       async function openNode(nodeId) {
          return new Promise((resolve) => {
             const notResultNode = document.querySelector(`g[data-id="${nodeId}"]`);
+            if (!notResultNode) { 
+               console.error(`No node found with data-id "${nodeId}"`); 
+               return; 
+            }
 
             // Call the displaySpecies function when the node has a species
-            if (notResultNode) {
-               const hasSpecies = notResultNode.getAttribute('has_species');
-               const parentName = notResultNode.getAttribute('parent-name');
-               const parentRank = notResultNode.getAttribute('parent-rank');
-               const parentTaxNodeID = notResultNode.getAttribute('parent-taxNodeId');
-               const children_ = notResultNode.getAttribute('children');
-               
-               if (hasSpecies !== '0' && children_ === null) {
-                  displaySpecies(parentName, parentRank, parentTaxNodeID);
-               }
-            } else {
-               console.log(`Node has species: "${nodeId}"`);
+            const hasSpecies = notResultNode.getAttribute('has_species');
+            const parentName = notResultNode.getAttribute('parent-name');
+            const parentRank = notResultNode.getAttribute('parent-rank');
+            const parentTaxNodeID = notResultNode.getAttribute('parent-taxNodeId');
+            const children_ = notResultNode.getAttribute('children');
+            
+            if (hasSpecies !== '0' && children_ === null) {
+               displaySpecies(parentName, parentRank, parentTaxNodeID);
             }
-
+            
             // when there is a ghost node, do not dispatch the click event
-            if (notResultNode) {
-               const is_assigned = notResultNode.getAttribute('is_assigned');
-               if (is_assigned === 'false') {
-                  console.log("Ghost Node: ", nodeId);
-                  resolve();
-                  return;
-               }
-            } else {
-               console.log(`No node found with data-id "${nodeId}"`);
+            const is_assigned = notResultNode.getAttribute('is_assigned');
+            if (is_assigned === 'false') {
+               //console.log("Ghost Node: ", nodeId);
+               resolve();
+               return;
             }
-
+            
             // when index value does not equal the data-id, open the node
             // if it is the target node, stop the loop
             if (nodeId !== ID_) {
-               console.log("dataID = ", ID_);
-               if (notResultNode) {
-                  notResultNode.dispatchEvent(new Event("click"));
-               } else {
-                  console.log(`No node found with data-id "${nodeId}"`);
-               }
+               notResultNode.dispatchEvent(new Event("click"));
             } else {
-               console.log("Reached the target node: ", ID_);
+               //console.log("Reached the target node: ", ID_);
                resolve();
                return;
             }
 
             // waiting set time for promise to resolve
             setTimeout(resolve, 1100);
+            return; // dmd 043024
          });
       }
 

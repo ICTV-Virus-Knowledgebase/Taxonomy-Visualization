@@ -9,10 +9,10 @@ body .block-ictv-d3-taxonomy-visualization {
 
 /* The module's top-level container Element */
 #d3_taxonomy_vis_container {
-   border-style: solid;
+   /*border-style: solid;
    border-radius: 10px;
    border-width: 1px;
-   border-color: #d3d3d3;
+   border-color: #d3d3d3;*/
    height: 100%;
    overflow: hidden;
    width: 100%;
@@ -23,9 +23,14 @@ body .block-ictv-d3-taxonomy-visualization {
 
    /* Colors */
    --border-focus-color: #80bdff;
+   --text-control-border-color: #ccc;
 
    /* Font sizes */
    --default-font-size: 0.9rem;
+
+   /* Padding */
+   --button-padding: 4px 12px;
+   --text-control-padding: 4px 6px;
 }
 
 /*---------------------------------------------------------------------------------------------------------------- 
@@ -47,11 +52,11 @@ body .block-ictv-d3-taxonomy-visualization {
 
 /* The MSL release control */
 #d3_taxonomy_vis_container .header-panel .release-ctrl {
-   border: 1px solid #ccc;
+   border: 1px solid var(--text-control-border-color);
    border-radius: 4px;
    font-size: var(--default-font-size);
    max-width: 140px;
-   padding: 4px;
+   padding: var(--text-control-padding); /*4px;*/
 }
 #d3_taxonomy_vis_container .header-panel .release-ctrl:focus {
    color: #495057;
@@ -138,7 +143,7 @@ body .block-ictv-d3-taxonomy-visualization {
    cursor: pointer;
    display: inline-block;
    font-size: var(--default-font-size);
-   padding: 4px 12px;
+   padding: var(--button-padding);
    text-align: center;
    user-select: none;
    vertical-align: middle;
@@ -151,11 +156,11 @@ body .block-ictv-d3-taxonomy-visualization {
    margin-right: 0.1rem;
 }
 #d3_taxonomy_vis_container .selectFormat {
-   border: 1px solid #ccc;
-   padding: 3px;
-   width: 70px;
+   border: 1px solid var(--text-control-border-color);
    border-radius: 0 4px 4px 0;
    font-size: var(--default-font-size);
+   padding: 4px;
+   width: 70px;
 }
 #d3_taxonomy_vis_container .selectFormat:focus {
    color: #495057;
@@ -171,7 +176,7 @@ body .block-ictv-d3-taxonomy-visualization {
    justify-self: flex-end;
    margin-left: 1.3rem;
    position: relative;
-   top: 12px;
+   top: 16px;
 }
 
 /* The search text, search button, and clear button */
@@ -187,18 +192,16 @@ body .block-ictv-d3-taxonomy-visualization {
 #d3_taxonomy_vis_container .search-panel .search-controls .search-text {
    background-color: #fff;
    background-image: none;
-   border: 1px solid #ccc;
+   border: 1px solid var(--text-control-border-color);
    border-radius: 4px 0 0 4px;
-   box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
+   /*box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);*/
    color: #555;
    font-size: var(--default-font-size);
-   /*line-height: 1.3;*/
    margin: 0;
-   padding: 3px 6px;
+   padding: var(--text-control-padding);
    vertical-align: middle;
    width: 200px;
 }
-/* dmd 04/26/24 CSS from taxonomy browser (ICTV.css) */
 #d3_taxonomy_vis_container .search-panel .search-text:focus {
    color: #495057;
    border-color: var(--border-focus-color);
@@ -210,13 +213,12 @@ body .block-ictv-d3-taxonomy-visualization {
    margin-right: 5px;
 }
 
-/* dmd 04/26/24 Basic button style from ICTV.css (originally from Bootstrap, I think?) */
 #d3_taxonomy_vis_container .search-panel button {
    border: 1px solid transparent;
    cursor: pointer;
    display: inline-block;
    font-size: var(--default-font-size); 
-   padding: 3px 10px;
+   padding: var(--button-padding);
    text-align: center;
    user-select: none;
    vertical-align: middle;
@@ -269,11 +271,102 @@ body .block-ictv-d3-taxonomy-visualization {
    margin-bottom: 0 !important;
 }
 
+
+/* Search results */
 #d3_taxonomy_vis_container .search-results-panel {
-   margin-top: 1.0rem;
+   margin: 15px 0 15px 0;
+}
+#d3_taxonomy_vis_container .search-results-table {
+   margin: 15px 0 0 0;
 }
 
-/* The spinner icon and message */
+#d3_taxonomy_vis_container .search-results-table tr.header-row {
+   background-color: #757575 !important;
+}
+#d3_taxonomy_vis_container .search-results-table tr.header-row th {
+   background-color: #757575 !important;
+   border-left-width: 0 !important;
+   border-right-width: 0 !important;
+   color: #fff !important;
+   font-size: 0.9rem !important;
+   text-align: left !important;
+}
+
+
+#d3_taxonomy_vis_container .search-results-table .result-alt-row {
+   background-color: #fff;
+}
+#d3_taxonomy_vis_container .search-results-table .result-row {
+   background-color: #eee;
+}
+#d3_taxonomy_vis_container .search-results-table tr:hover[data-id] {
+   background-color: #ffc90e;
+   cursor: pointer;
+}
+
+#d3_taxonomy_vis_container .search-results-table tr td.controls-column {
+   align-items: center;
+   display: flex;
+   justify-content: space-around;
+   padding: 4px;
+}
+#d3_taxonomy_vis_container .search-results-table .controls-column button {
+   border: 1px solid rgba(0, 0, 0, .075);
+   border-radius: 4px;
+   box-sizing: border-box;
+   cursor: pointer;
+   display: inline-block;
+   font-size: 0.75rem;
+   font-weight: 400;
+   line-height: 1.5;
+   margin: 0;
+   max-width: 60px;
+   padding: 2px 10px;
+   text-align: center;
+   user-select: none;
+   vertical-align: middle;
+   white-space: nowrap;
+   width: 60px;
+   -webkit-user-select: none;
+   -moz-user-select: none;
+   -ms-user-select: none;
+}
+#d3_taxonomy_vis_container .search-results-table .controls-column button:hover {
+   background-color: #0062cc;
+   border-collapse: separate;
+   border-color: #005cbf;
+   color: #fff;
+
+
+   /*color: #495057;*/
+   border-color: var(--border-focus-color);
+   box-shadow: none;
+   outline: 0;
+}
+
+#d3_taxonomy_vis_container .search-results-table td {
+   font-size: 0.9rem;
+   padding: 7px;
+}
+#d3_taxonomy_vis_container .search-results-table .release-name {
+   text-align: left;
+   width: 70px;
+}
+
+#d3_taxonomy_vis_container .search-results-table .level-name {
+   text-align: left;
+   text-transform: capitalize;
+   width: 56px;
+}
+
+#d3_taxonomy_vis_container .search-term-result {
+   background-color: #ffc90e;
+}
+
+
+/*----------------------------------------------------------------------------------------------------------------
+  The spinner icon and message 
+----------------------------------------------------------------------------------------------------------------*/
 #d3_taxonomy_vis_container .search-results-panel .spinner-icon {
    font-size: 1.5rem;
    margin-left: 0.5rem;
@@ -314,7 +407,6 @@ body .block-ictv-d3-taxonomy-visualization {
 }
 
 #d3_taxonomy_vis_container .node-text {
-   /* font-size: 1.5rem; */
    font-weight: bold;
    font-style: italic;
    text-align: right;
@@ -325,7 +417,8 @@ body .block-ictv-d3-taxonomy-visualization {
    text-align: right;
 }
 
-#d3_taxonomy_vis_container .legend-node-text {
+#d3_taxonomy_vis_container text.legend-node-text {
+   color: #999; /* dmd test 043024 */
    font-size: 1.5rem;
    font-style: normal;
    text-align: center;
