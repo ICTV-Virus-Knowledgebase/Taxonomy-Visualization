@@ -1,16 +1,40 @@
 
+import argparse
 import contextlib
 import pyodbc
 import subprocess
 
 
-# Populate the names of the database server and the current ICTVonline database.
-dbServer = "ICTVDEV"
-ictvDB = "ICTVonline39"
+#-----------------------------------------------------------------------------------
+# Export release data and save as releases.json.
+#-----------------------------------------------------------------------------------
+def exportReleasesJSON(dbServer_, ictvDB_):
 
+   # Validate parameters
+   if dbServer_ in (None, '') or not dbServer_.strip():
+      raise Exception("The dbServer parameter is invalid")
+   
+   if ictvDB_ in (None, '') or not ictvDB_.strip():
+      raise Exception("The ictvDB parameter is invalid")
+   
+   # Delete an existing version of releases.json.
+   deleteCMD = (f"del \"JSON\\releases.json")
+   subprocess.run(deleteCMD, shell=True)
 
-# Export taxonomy JSON files for non-species and species taxa in every MSL release.
-def exportTaxonomyJSON(dbServer_, ictvDB_, treeID_):
+   # Create the command line text to run sqlcmd.
+   releasesCMD = (f"sqlcmd -S {dbServer_} "
+         f"-Q \"EXEC [{ictvDB_}].dbo.exportReleasesJSON \" "
+         f"-o \"JSON\\releases.json\" "
+         "-y 0 ")
+
+   # Run the command
+   subprocess.run(releasesCMD, shell=True)
+      
+
+#-----------------------------------------------------------------------------------
+# Export JSON files for non-species and species taxa.
+#-----------------------------------------------------------------------------------
+def exportTaxonomyJSON(dbServer_, ictvDB_, mslReleaseNum_):
 
    # Validate parameters
    if dbServer_ in (None, '') or not dbServer_.strip():
@@ -26,23 +50,27 @@ def exportTaxonomyJSON(dbServer_, ictvDB_, treeID_):
       f"Database={ictvDB_};"
       "Trusted_Connection=yes;")
 
-   # Variables used in the SQL below.
-   treeConstraint = ""
-   treeLimit = ""
+   treeSQL = None
 
-   # If a tree ID was provided, we will limit the tree ID query to one result.
-   if treeID_ not in (None, ''):
-      treeConstraint = f"AND tree_id = {treeID_} "
-      treeLimit = "TOP 1 "
+   if isinstance(mslReleaseNum_, int):
 
-   # SQL to retrieve tree ID(s) in the ICTV database's taxonomy "table of contents" table.
-   treeSQL = f"""
-      SELECT {treeLimit}tree_id
-      FROM taxonomy_toc
-      WHERE msl_release_num IS NOT NULL
-      {treeConstraint}
-      ORDER BY tree_id ASC
-   """
+      # Return the tree ID that corresponds to this MSL release number.
+      treeSQL = f"""
+         SELECT TOP 1 toc.tree_id, tn.name
+         FROM taxonomy_toc toc
+         JOIN taxonomy_node tn ON tn.taxnode_id = toc.tree_id
+         WHERE toc.msl_release_num = {mslReleaseNum_}
+      """
+   else:
+
+      # Return all tree IDs that have a valid MSL release number.
+      treeSQL = """
+         SELECT toc.tree_id, tn.name
+         FROM taxonomy_toc toc
+         JOIN taxonomy_node tn ON tn.taxnode_id = toc.tree_id
+         WHERE toc.msl_release_num IS NOT NULL
+         ORDER BY toc.tree_id ASC
+      """
 
    # Open the database connection
    with contextlib.closing(pyodbc.connect(dbConnectionString)) as dbConnection:
@@ -53,17 +81,18 @@ def exportTaxonomyJSON(dbServer_, ictvDB_, treeID_):
       # Iterate over all tree IDs that are returned.
       for row in treeCursor.execute(treeSQL):
          
-         # Get the tree ID as a string.
+         # Get the tree ID and tree name as strings.
          treeID = str(row.tree_id)
+         treeName = str(row.name)
 
-         # Get the year from the tree ID.
-         year = treeID[0:4]
-         formattedYear = year if treeID[4] == "0" else f"{year}.{treeID[4]}"
+         # Delete existing versions of the JSON files for this release.
+         deleteCMD = (f"del \"JSON\\*Species_{treeName}.json")
+         subprocess.run(deleteCMD, shell=True)
 
          # Create the command line text to run sqlcmd for non-species taxa.
          nonSpeciesCMD = (f"sqlcmd -S {dbServer_} "
                f"-Q \"EXEC [{ictvDB_}].dbo.exportNonSpeciesTaxonomyJSON @treeID = {treeID}\" "
-               f"-o \"JSON\\nonSpecies_{formattedYear}.json\" "
+               f"-o \"JSON\\nonSpecies_{treeName}.json\" "
                "-y 0 ")
 
          # Run the command
@@ -72,7 +101,7 @@ def exportTaxonomyJSON(dbServer_, ictvDB_, treeID_):
          # Create the command line text to run sqlcmd for species taxa.
          speciesCMD = (f"sqlcmd -S {dbServer_} "
                f"-Q \"EXEC [{ictvDB_}].dbo.exportSpeciesTaxonomyJSON @treeID = {treeID}\" "
-               f"-o \"JSON\\species_{formattedYear}.json\" "
+               f"-o \"JSON\\species_{treeName}.json\" "
                "-y 0 ")
 
          # Run the command
@@ -80,7 +109,18 @@ def exportTaxonomyJSON(dbServer_, ictvDB_, treeID_):
 
 
 
-
 if __name__ == '__main__':
-    
-    exportTaxonomyJSON(dbServer, ictvDB, None)
+
+   parser = argparse.ArgumentParser(description="Export one or more MSL releases from the taxonomy_json table and save as JSON files.")
+
+   parser.add_argument("--dbServer", dest="dbServer", metavar='SERVER_NAME', nargs=1, required=True, help="The database server name")
+   parser.add_argument("--ictvDB", dest="ictvDB", metavar='ICTV_DB', nargs=1, required=True, help="The database name")
+   parser.add_argument("--release", dest="release", metavar='N', required=False, nargs="?", type=int, help="An MSL release number")
+
+   args = parser.parse_args()
+
+   # Export one or more MSL releases from the taxonomy_json table and save as JSON files.
+   exportTaxonomyJSON(args.dbServer[0], args.ictvDB[0], args.release)
+
+   # Export release data as JSON and save as a .json file.
+   exportReleasesJSON(args.dbServer[0], args.ictvDB[0])
