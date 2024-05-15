@@ -197,31 +197,32 @@ window.ICTV.d3TaxonomyVisualization = function (
       switch (rankName_) {
          case "realm":
          case "subrealm":
-            return hasChildren_ ? "#fff" : "#006600";
+            return hasChildren_ ? "#fff" : "#fff";
 
          case "kingdom":
          case "subkingdom":
-            return hasChildren_ ? "#fff" : "#278627";
+            return hasChildren_ ? "#fff" : "#fff";
 
          case "phylum":
          case "subphylum":
-            return hasChildren_ ? "#fff" : "#00426D";
+            return hasChildren_ ? "#fff" : "#fff";
 
          case "class":
          case "subclass":
-            return hasChildren_ ? "#fff" : "#3D79AA";
+            return hasChildren_ ? "#fff" : "#fff";
 
          case "order":
          case "suborder":
-            return hasChildren_ ? "#fff" : "#006CB5";
+            return hasChildren_ ? "#fff" : "#fff";
 
          case "family":
          case "subfamily":
-            return hasChildren_ ? "#fff" : "#258DE4";
+            // return hasChildren_ ? "#fff" : "#258DE4";
+            return hasChildren_ ? "#fff" : "#fff";
 
          case "genus":
          case "subgenus":
-            return hasChildren_ ? "#fff" : "#99D7FF";
+            return hasChildren_ ? "#fff" : "#fff";
 
          default:
             return null;
@@ -1220,6 +1221,29 @@ d
                         return "none";
                      }
                   });
+
+                  // const linkNodeColor = document.querySelectorAll('g');
+                  // const textElement = linkNodeColor.querySelector('text');
+
+                  // for (i = 0; i < linkNodeColor.length; i++) {
+                  //    console.log(linkNodeColor[i]);
+                  // }
+                  // const textElement = linkNodeColor.querySelector('text');
+
+               // var linkUpdate = linkEnter.merge(link);
+               // linkUpdate
+               //    .transition("path.link")
+               //    .duration(settings.animationDuration)
+               //    .attr("d", function (d) {
+               //       return diagonal(d, d.parent);
+               //    })
+               //    .style("stroke", function (d) {
+               //       if (d.data.name !== "down" || d.data.name !== "up") {
+               //          return d._children ? "#808080" : "#006CB5";
+               //       }
+               //       findParent(d);
+               //    });
+
                var linkUpdate = linkEnter.merge(link);
                linkUpdate
                   .transition("path.link")
@@ -1233,6 +1257,71 @@ d
                      }
                      findParent(d);
                   });
+
+                  
+                  const pathLinks = d3.selectAll('path.link');
+                  
+                  pathLinks.transition()
+                  .duration(900)
+                  // .style("stroke")
+                  .end()
+                  .then(() => {
+                      const lastLink = d3.select(pathLinks.nodes()[pathLinks.size() - 1]);
+                      const lastLinkColor = window.getComputedStyle(lastLink.node()).getPropertyValue('stroke');
+                     //  console.log(lastLinkColor);
+                      if (lastLinkColor === "rgb(128, 128, 128)"){
+                          lastLink.style("stroke", "#006CB5");
+                      }
+                     //  console.log(lastLink);
+                  });
+                  
+               // var linkUpdate = linkEnter.merge(link);
+               // linkUpdate
+               //    .transition("path.link")
+               //    .duration(settings.animationDuration)
+               //    .attr("d", function (d) {
+               //       return diagonal(d, d.parent);
+               //    })
+               //    .style("stroke", function (d) {
+               //       if (d.data.name !== "down" || d.data.name !== "up") {
+               //          const gNodes = document.querySelectorAll('g.node');
+               //          for (i = 0; i < gNodes.length; i++) {
+               //             const textElement = gNodes[i].querySelector('text');
+               //             if (textElement.textContent === '') {
+               //                // console.log(textElement);
+               //                return "#006CB5";
+               //             } else {
+               //                return d._children ? "#808080" : "#006CB5";
+               //             }
+               //          }
+               //       }
+               //       findParent(d);
+               //    });
+
+
+               // const selectLinks = document.querySelectorAll('path.link');
+               // // console.log(selectLinks);
+
+               // setTimeout(() => {
+               //    for (let i = 0; i < selectLinks.length; i++) {
+               //       const lastLink = selectLinks[selectLinks.length - 1];
+               //       console.log(lastLink);
+               //       const lastLinkColor = window.getComputedStyle(lastLink).getPropertyValue('stroke');
+               //       // console.log(lastLinkColor);
+               //       if (lastLinkColor !== "rgb(128, 128, 128)") {
+               //          // console.log(lastLinkColor);
+               //          lastLink.style.stroke = "#006CB5";
+               //       }
+               //    }
+               // }, 1000);
+               // const lastLink = allLinks[allLinks.length - 1];
+               // console.log(lastLink);
+               // const lastLinkColor = window.getComputedStyle(lastLink).getPropertyValue('stroke');
+               // console.log(lastLinkColor);
+
+               // if (lastLink) {
+               //    lastLink.style.stroke = "#006CB5";
+               // }
                // .attr('cursor', 'pointer');
 
                var linkExit = link
@@ -1474,6 +1563,35 @@ d
             
             if (hasSpecies !== '0' && children_ === null) {
                displaySpecies(parentName, parentRank, parentTaxNodeID);
+            }
+
+            // lrm 5-10-2024
+            // Reset the color of all nodes to the default color
+            // This ensures the search result node is the
+            // only node that is highlighted
+            document.querySelectorAll('text.node-text').forEach(textElementReset => {
+               textElementReset.style.fill = "#000000";
+            });
+
+            // Highlight the last expanded node/search result node
+            // This only works for searching nodes
+            const textToHighlight = notResultNode.querySelector('text');
+            // console.log("textToHighlight: ", textToHighlight);
+            if (textToHighlight) {
+               textToHighlight.style.fill = "#006CB5";
+            }
+
+            // Make sure links are blue all the way to the last expanded node
+            const links = document.querySelectorAll('path.link');
+            if (notResultNode) {
+               const textElement = notResultNode.querySelector('text');
+               if (textElement && textElement.textContent === '') {
+                  // directly access the last link and change its style
+                  const lastLink = links[links.length - 1];
+                  if (lastLink) {
+                     lastLink.style.stroke = "#006CB5";
+                  }
+               }
             }
             
             // when there is a ghost node, do not dispatch the click event
