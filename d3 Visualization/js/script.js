@@ -79,6 +79,9 @@ window.ICTV.d3TaxonomyVisualization = function (
          translateY: -(jQuery(window).height() * 0.45), //-1800
       },
    };
+   var selectedNode;
+   var clickedText;
+   var clickedCircle;
    var selected;
    var num_flag = false;
    var num;
@@ -192,44 +195,6 @@ window.ICTV.d3TaxonomyVisualization = function (
       });
    }
 
-   // Return the color associated with this rank name and whether or not the node has child nodes.
-   function getRankColor(hasChildren_, rankName_) {
-      switch (rankName_) {
-         case "realm":
-         case "subrealm":
-            return hasChildren_ ? "#fff" : "#fff";
-
-         case "kingdom":
-         case "subkingdom":
-            return hasChildren_ ? "#fff" : "#fff";
-
-         case "phylum":
-         case "subphylum":
-            return hasChildren_ ? "#fff" : "#fff";
-
-         case "class":
-         case "subclass":
-            return hasChildren_ ? "#fff" : "#fff";
-
-         case "order":
-         case "suborder":
-            return hasChildren_ ? "#fff" : "#fff";
-
-         case "family":
-         case "subfamily":
-            // return hasChildren_ ? "#fff" : "#258DE4";
-            return hasChildren_ ? "#fff" : "#fff";
-
-         case "genus":
-         case "subgenus":
-            return hasChildren_ ? "#fff" : "#fff";
-
-         default:
-            return null;
-      }
-   }
-
-
    // TODO: What button? Give this a better name!
    function initializeButton() {
 
@@ -251,7 +216,9 @@ window.ICTV.d3TaxonomyVisualization = function (
 
       // Add options to the dropdown.
       selectFormat.selectAll("option")
-         .data(["png", "jpeg", "pdf"]) // SVG supported now
+         // lrm 6-7-2024
+         // changed "pdf" to svg
+         .data(["png", "svg"]) // SVG supported now
          .enter()
          .append("option")
          .attr("value", function (d) { return d; })
@@ -262,84 +229,191 @@ window.ICTV.d3TaxonomyVisualization = function (
 
          const selectedFormat = selectFormat.node().value;
 
-         // Get references to taxonomy and species panels.
-         let svgEls = d3.selectAll(`${containerSelector} .taxonomy-panel svg, ${containerSelector} .species-panel svg`).nodes();
+         if (selectedFormat === "png") {
 
-         //             console.log(svgEls);
+            // Select the SVG element from the document
+            let svg = document.querySelector('svg');
 
-         //             if (selectedFormat === "svg") {
-         //                 // Create a new svg element
-         //                 let combinedSvg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-         //         r
-         //                 svgEls.forEach((svgEl, index) => {
-         //                     // Create a group element to hold the contents of each svg
-         //                     let g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            // Get the D3 selection of the SVG
+            let svgSelection = d3.select(svg);
 
-         //                     if(index == 1) {
-         //                         g.setAttribute("transform", "translate(1500, 0)");
-         //                     }
-         //                     let node = document.importNode(svgEl, true);
-         //                     g.appendChild(node);
-         //                     combinedSvg.appendChild(g);
-         //                 });
+            // Apply inline CSS to match SVG before
+            svgSelection.selectAll('text.legend-node-text')
+               .style('font-size', '64px')
+               .style('font-style', 'normal')
+               .style('text-transform', 'capitalize')
+               .style('fill', 'black')
+               .attr('transform', function (d, i) {
+                  return 'rotate(-45, 50, 50)';
+               })
 
-         //                 // Save the combined svg
-         //                 let svgData = new XMLSerializer().serializeToString(combinedSvg);
-         //                 let preface = '<?xml version="1.0" standalone="no"?>\r\n';
-         //                 let svgBlob = new Blob([preface, svgData], {type:"image/svg+xml;charset=utf-8"});
-         //                 let svgUrl = URL.createObjectURL(svgBlob);
-         //                 let downloadLink = document.createElement("a");
-         //                 downloadLink.href = svgUrl;
-         //                 downloadLink.download = "screenshot.svg";
-         //                 document.body.appendChild(downloadLink);
-         //                 downloadLink.click();
-         //                 document.body.removeChild(downloadLink);
-         //             }
+            svgSelection.selectAll('text.node-text')
+               .style('font-size', '64px')
+               .style('font-style', 'italic')
+               .style('font-weight', 'bold')
 
-         //  else {
+            svgSelection.selectAll('text.unassigned-text')
+               .style('font-size', '64px')
+               .style('font-style', 'normal')
+               .style('text-transform', 'capitalize')
+               .style('fill', 'black')
 
-         let taxonomyPanel = document.querySelector(".taxonomy-panel");
-         let speciesPanel = document.querySelector(".species-panel");
+            // Save the original viewBox attribute value of the SVG
+            let originalViewBox = svg.getAttribute('viewBox');
 
-         let processPanel = panel => {
-            return html2canvas(panel, { allowTaint: true }).then(canvas => {
-               return canvas.toDataURL(`image/${selectedFormat}`);
-            });
-         };
-         if (selectedFormat === "png" || selectedFormat === "jpeg") {
-            Promise.all([processPanel(taxonomyPanel), processPanel(speciesPanel)]).then((screenshots) => {
-               let img1 = new Image();
-               let img2 = new Image();
+            // Get the bounding box of the SVG content
+            let bbox = svg.getBBox();
 
-               img1.onload = function () {
-                  img2.onload = function () {
-                     let canvas = document.createElement('canvas');
-                     canvas.width = img1.width + img2.width;
-                     canvas.height = Math.max(img1.height, img2.height);
-                     let ctx = canvas.getContext('2d');
-                     ctx.drawImage(img1, 0, 0);
-                     ctx.drawImage(img2, img1.width, 0);
+            // Set the viewBox attribute to the bounding box dimensions to fit the SVG contents
+            svg.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
 
-                     let link = document.createElement('a');
-                     link.setAttribute('download', `screenshot.${selectedFormat}`);
-                     link.setAttribute('href', canvas.toDataURL(`image/${selectedFormat}`));
-                     link.click();
+            // Get the size of the SVG element in pixels
+            let svgSize = svg.getBoundingClientRect();
+
+            // Function to process the SVG and convert it to an image
+            let processPanel = () => {
+               return new Promise((resolve, reject) => {
+
+                  // Serialize the SVG element to a string
+                  let serializer = new XMLSerializer();
+                  let svgStr = serializer.serializeToString(svg);
+
+                  // Create a scale factor
+                  let scaleFactor = 4;
+
+                  // Create a canvas element to draw the SVG onto
+                  let canvas = document.createElement("canvas");
+                  canvas.width = svgSize.width * scaleFactor;
+                  canvas.height = svgSize.height * scaleFactor;
+
+                  // Get the 2D rendering context of the canvas
+                  let ctx = canvas.getContext("2d");
+
+                  // Scale the context before drawing the SVG onto it
+                  ctx.scale(scaleFactor, scaleFactor);
+
+                  let img = document.createElement("img"); // Create an image element
+                  img.onload = () => {
+                     ctx.fillStyle = "white";
+                     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                     // Draw the image (SVG content) onto the canvas
+                     ctx.drawImage(img, 0, 0);
+
+                     // Convert the canvas content to a data URL (image/png or image/jpeg)
+                     let imgData = canvas.toDataURL(`image/${selectedFormat}`);
+
+                     // Reset or remove the viewBox attribute to its original value
+                     if (originalViewBox) {
+                        svg.setAttribute('viewBox', originalViewBox);
+                     } else {
+                        svg.removeAttribute('viewBox');
+                     }
+
+                     // Resolve the promise with the image data
+                     resolve(imgData);
                   };
-                  img2.src = screenshots[1];
-               };
-               img1.src = screenshots[0];
+                  // Set the image source to the serialized SVG data (base64 encoded)
+                  img.setAttribute("src", "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgStr))));
+               });
+            };
+
+            // Process the SVG and then save the image
+            processPanel().then((imgData) => {
+               // Create a link element to download the image
+               let link = document.createElement('a');
+               link.download = `screenshot.${selectedFormat}`; // Use the selected format in the filename
+               link.href = imgData;
+               link.click(); // Trigger the download
             });
-         } else if (selectedFormat === "pdf") {
-            let printWindow = window.open('', '_blank');
-            printWindow.document.write('<html><head><title>Print</title></head><body>');
-            printWindow.document.write(taxonomyPanel.outerHTML);
-            printWindow.document.write(speciesPanel.outerHTML);
-            printWindow.document.write('</body></html>');
-            printWindow.document.close();
-            printWindow.print();
          }
-      }
-      );
+
+         // lrm 5-29-2024
+         // SVG selection
+         else if (selectedFormat === "svg") {
+
+            // Select the SVG element
+            let svg = document.querySelector('svg');
+
+            // Store the original viewBox value
+            let originalViewBox = svg.getAttribute('viewBox');
+
+            // Get the bounding box of the SVG content
+            let bbox = svg.getBBox();
+
+            // Set the viewBox attribute to the bounding box dimensions to fit the SVG contents
+            svg.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
+
+            // Create a D3 selection from the SVG
+            let svgSelection = d3.select(svg);
+
+            // Apply inline styles to the SVG elements
+            svgSelection.selectAll('text.legend-node-text')
+               // 64px = 4rem
+               // adobe illustrator did not like rem
+               .style('font-size', '64px')
+               .style('font-style', 'normal')
+               .style('fill', 'black')
+               // adobe illustrator does not read text-transform
+               // instead, use JS to capitalize the first letter for rank columns
+               .text(function (d) {
+                  if (d.data.rankName === "species") {
+                     return;
+                  } else {
+                  return d.data.rankName.charAt(0).toUpperCase() + d.data.rankName.slice(1);
+                  }
+               })
+               // adobe illustrator likes this for text rotation
+               .attr('transform', function (d, i) {
+                  return 'rotate(-45, 50, 50)';
+               });
+
+            svgSelection.selectAll('text.node-text')
+               .style('font-size', '64px')
+               .style('font-style', 'italic')
+               .style('font-weight', 'bold')
+
+            svgSelection.selectAll('text.unassigned-text')
+               .style('font-size', '64px')
+               .style('font-style', 'normal')
+               .style('fill', 'black')
+
+            // Serialize the SVG to a string
+            let serializer = new XMLSerializer();
+            let svgStr = serializer.serializeToString(svg);
+
+            // Create a Blob object from the SVG string
+            let blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+
+            // Create a URL for the Blob object
+            let url = URL.createObjectURL(blob);
+
+            // Create a link element and set its href to the Blob URL
+            let link = document.createElement('a');
+            link.href = url;
+
+            // Set the download attribute of the link to specify the file name
+            link.download = 'image.svg';
+
+            // Append the link to the document
+            document.body.appendChild(link);
+
+            // Simulate a click on the link
+            link.click();
+
+            // Remove the link from the document
+            document.body.removeChild(link);
+
+            // Reset or remove the viewBox attribute to its original value
+            if (originalViewBox) {
+               svg.setAttribute('viewBox', originalViewBox);
+            } else {
+               svg.removeAttribute('viewBox');
+            }
+
+         }
+
+      });
    }
 
    let zoom = d3.zoom()
@@ -365,7 +439,11 @@ window.ICTV.d3TaxonomyVisualization = function (
 
       if (!releaseYear) { throw new Error("Invalid release year in getRelease (empty)"); }
 
-      const release = releases.data[`${releaseYear}`];
+      // when running in local environment, use the r
+      const release = releases.data[`r${releaseYear}`];
+
+      // when uploading to drupal, use only the year
+      // const release = releases.data[`${releaseYear}`];
       if (!release) { throw new Error(`No release found for release year ${releaseYear}`); }
 
       return release;
@@ -580,7 +658,7 @@ window.ICTV.d3TaxonomyVisualization = function (
       });
 
       d3.json(nonSpeciesFilename).then(function (data) {
-
+         
          var genus = false;
 
          // Set the width and height available within the SVG.
@@ -647,7 +725,8 @@ window.ICTV.d3TaxonomyVisualization = function (
                      }
                   }
                }
-            } while (num > 1000);
+            } 
+            while (num > 1000);
             const max = Math.max(...arr);
             num_flag = true;
             return d.children;
@@ -673,6 +752,7 @@ window.ICTV.d3TaxonomyVisualization = function (
                );
 
             let zoom = d3.zoom()
+               // zoom constraints
                // .05: Zoom out to 5% of the original size
                // .5: Zoom in to .5 times the original size
                .scaleExtent([0.05, .5])
@@ -758,7 +838,8 @@ window.ICTV.d3TaxonomyVisualization = function (
                const dx = 21 * scaleFactor;
                const dy = settings.svg.height / (currentNodeCount + 1);
                treeLayout.nodeSize([dx, dy]);
-               links = info.descendants().slice(1);
+               var links = info.descendants().slice(1);
+               // console.log(links);
                const treeNodes = treeLayout(ds);
                treeNodes.each((d) => {
                   const x = d.x; // the x-coordinate of the node in the layout
@@ -769,9 +850,9 @@ window.ICTV.d3TaxonomyVisualization = function (
                parent.forEach(function (d) {
                   var h = settings.svg.height / 125;
                   var w = (settings.svg.width * 5) / rankCount;
-d
+
                   let str = d.data.child_counts;
-                  
+
                   var result;
                   const regex = /(\d+)/;
                   if (typeof str === "string" && str.length > 0) {
@@ -797,7 +878,7 @@ d
                   .enter()
                   .append("g")
                   .attr("class", "node")
-                  // add data-id atttribute fo callback function
+                  // add attributes to g nodes from JSON data
                   .attr("data-id", function (d) {
                      return d.data.json_id;
                   })
@@ -822,6 +903,11 @@ d
                   .attr("children", function (d) {
                      return d.data.children;
                   })
+                  .attr("ghost-node", function (d) {
+                     if (isGhostNode(d)) {
+                        return "true";
+                     }
+                  })
                   .attr("transform", function (d) {
                      if (!d || isNaN(source.x0) || isNaN(source.y0)) {
                         return null;
@@ -830,73 +916,95 @@ d
                   })
                   .on("click", click);
 
-
+               // lrm 5-22-2024
+               // Commented out this code to instead, append a circle to the nodes
+               // this is done in the update circle.node function
+               // TODO: Probably take this out, leaving it here for now
                Enter.append("rect")
                   .style("stroke", "black")
                   .style("stroke-width", "3px")
-                  .attr("width", function (d) {
-                     if (d.data.name === null) {
-                        if (
-                           d.data.rankName === "realm" &&
-                           d.data.taxNodeID !== "legend"
-                        ) {
-                           return "20px";
-                        } else if (
-                           d.data.has_assigned_siblings === true ||
-                           d.data.has_unassigned_siblings === true
-                        ) {
-                           return "20px";
-                        } else {
-                           return "0px";
-                        }
-                     }
-                  })
-                  .attr("height", function (d) {
-                     if (d.data.name === "Unassigned") {
-                        if (
-                           d.data.rankName === "realm" &&
-                           d.data.taxNodeID !== "legend"
-                        ) {
-                           return "20px";
-                        } else if (
-                           d.data.has_assigned_siblings === true &&
-                           d.data.has_unassigned_siblings === true
-                        ) {
-                           return "20px";
-                        } else {
-                           return "0px";
-                        }
-                     }
-                  })
+                  // .attr("width", function (d) {
+                  //    if (d.data.name === null) {
+                  //       // console.log(d.data.name);
+                  //       if (
+                  //          d.data.rankName === "realm" &&
+                  //          d.data.taxNodeID !== "legend"
+                  //       ) {
+                  //          return "20px";
+                  //       } else if (
+                  //          d.data.has_assigned_siblings === true ||
+                  //          d.data.has_unassigned_siblings === true
+                  //       ) {
+                  //          return "20px";
+                  //       } else {
+                  //          return "0px";
+                  //       }
+                  //    }
+                  // })
+                  // .attr("height", function (d) {
+                  //    if (d.data.name === "Unassigned") {
+                  //       // console.log(d.data.name);
+                  //       if (
+                  //          d.data.rankName === "realm" &&
+                  //          d.data.taxNodeID !== "legend"
+                  //       ) {
+                  //          return "20px";
+                  //       } else if (
+                  //          d.data.has_assigned_siblings === true &&
+                  //          d.data.has_unassigned_siblings === true
+                  //       ) {
+                  //          return "20px";
+                  //       } else {
+                  //          return "0px";
+                  //       }
+                  //    }
+                  // })
                   .style("fill", function (d) {
-                     let color = getRankColor(!!d._children, d.data.rankName);
-                     if (!!color) {
-                        return color;
-                     }
+
+                     // if (this === clickedRect) {
+                     //    console.log(clickedRect);
+                     //    // console.log(clickedCircle);
+                     //    return "#006CB5";
+                     // } else  if(this !== clickedRect){
+                     //    return "white";
+                     // }
 
                      findParent(d);
                   })
                   .attr("cursor", "pointer");
-
+               // lrm 5-22-2024
+               // this code appears to not be needed, the logic for the circle is in the update circle.node function
                Enter.append("circle")
                   .attr("class", "node")
-                  .attr("r", function (d) {
-                     if (d.data.name !== "Unassigned") {
-                        return settings.node.radius;
-                     } else {
-                        return 0;
-                     }
-                  })
+                  // .attr("r", function (d) {
+                  //    if (d.data.name !== "Unassigned") {
+                  //       return settings.node.radius;
+                  //    } else if (d.data.name === "Unassigned") {
+                  //       if (d.data.rankName === "realm" && d.data.taxNodeID !== "legend") {
+                  //          return settings.node.radius;
+                  //       } else if (d.data.has_assigned_siblings === true && d.data.has_unassigned_siblings === true) {
+                  //          console.log(d.data.has_assigned_siblings);
+                  //          return settings.node.radius;
+                  //       } else {
+                  //          return 0;
+                  //       }
+                  //    }
+                  // })
                   .style("stroke", "black")
                   .style("stroke-width", `${settings.node.strokeWidth}px`)
                   .style("fill", function (d) {
-                     let color = getRankColor(!!d._children, d.data.rankName);
-                     if (!!color) {
-                        return color;
-                     }
-
+                     
+                     // lrm 5-20-2024
+                     // update DOM element's appended circle when clicked
+                     // if (this === clickedCircle) {
+                     //    // console.log(clickedCircle);
+                     //    return "#006CB5";
+                     // } else  if(this !== clickedCircle) {
+                     //    return "white";
+                     // }
                      findParent(d);
                   })
+                  
                   .style("opacity", function (d) {
                      // TODO: what is this doing?
                      return !d.data.parentDistance ? 0 : 1;
@@ -921,8 +1029,10 @@ d
 
                      if (d.data.taxNodeID === "legend") {
                         className = "legend-node-text";
-                     } else if (d.data.name === "Unassigned") {
+                     } else if (d.data.name === "Unassigned" && !isGhostNode(d)) {
                         className = "unassigned-text";
+                     } else if(isGhostNode(d)) {
+                        className = "ghost-node-text";
                      }
 
                      return className;
@@ -949,10 +1059,12 @@ d
                   .attr("dx", settings.node.textDx)
                   .attr("dy", settings.node.textDy)
                   .text(function (d) {
+                     // Do not display species in legend
                      if (d.data.name === "Unassigned" || d.data.rankName === "tree") {
                         if (d.data.taxNodeID === "legend") {
                            // Don't display "species" in the legend.
                            if (d.data.rankName === "species") {
+                              // return "Species"; if you want to display "Species" in the rank column
                               return "";
                            }
                            return d.data.rankName;
@@ -1018,101 +1130,120 @@ d
                      return "translate(" + d.y + "," + d.x + ")";
                   });
 
+               // lrm 5-22-2024
+               // instead of rect, append a circle to the nodes
+               // this is done in the update circle.node function
+               // TODO: Probably take this out, leaving it for now
                Update.select("rect")
                   .style("stroke", "black")
                   .style("stroke-width", "2px")
-                  .attr("width", function (d) {
-                     if (d.data.name === "Unassigned") {
-                        if (
-                           d.data.rankName === "realm" &&
-                           d.data.taxNodeID !== "legend"
-                        ) {
-                           return "30px";
-                        } else if (
-                           d.data.has_assigned_siblings === true ||
-                           d.data.has_unassigned_siblings === true
-                        ) {
-                           return "30px";
-                        } else {
-                           return "0px";
-                        }
-                     }
-                  })
-                  .attr("height", function (d) {
-                     if (d.data.name === "Unassigned") {
-                        if (
-                           d.data.rankName === "realm" &&
-                           d.data.taxNodeID !== "legend"
-                        ) {
-                           return "30px";
-                        } else if (
-                           d.data.has_assigned_siblings === true ||
-                           d.data.has_unassigned_siblings === true
-                        ) {
-                           return "30px";
-                        } else {
-                           return "0px";
-                        }
-                     }
-                  })
-                  .attr("x", function (d) {
-                     if (d.data.name === "Unassigned") {
-                        if (
-                           d.data.rankName === "realm" &&
-                           d.data.taxNodeID !== "legend"
-                        ) {
-                           return "-15px";
-                        } else if (
-                           d.data.has_assigned_siblings === true ||
-                           d.data.has_unassigned_siblings === true
-                        ) {
-                           return "-15px";
-                        } else {
-                           return "0px";
-                        }
-                     }
-                  })
-                  .attr("y", function (d) {
-                     if (d.data.name === "Unassigned") {
-                        if (
-                           d.data.rankName === "realm" &&
-                           d.data.taxNodeID !== "legend"
-                        ) {
-                           return "-15px";
-                        } else if (
-                           d.data.has_assigned_siblings === true ||
-                           d.data.has_unassigned_siblings === true
-                        ) {
-                           return "-15px";
-                        } else {
-                           return "0px";
-                        }
-                     }
-                  })
+                  // .attr("width", function (d) {
+                  //    if (d.data.name === "Unassigned") {
+                  //       if (
+                  //          d.data.rankName === "realm" &&
+                  //          d.data.taxNodeID !== "legend"
+                  //       ) {
+                  //          return "30px";
+                  //       } else if (
+                  //          d.data.has_assigned_siblings === true ||
+                  //          d.data.has_unassigned_siblings === true
+                  //       ) {
+                  //          return "30px";
+                  //       } else {
+                  //          return "0px";
+                  //       }
+                  //    }
+                  // })
+                  // .attr("height", function (d) {
+                  //    if (d.data.name === "Unassigned") {
+                  //       if (
+                  //          d.data.rankName === "realm" &&
+                  //          d.data.taxNodeID !== "legend"
+                  //       ) {
+                  //          return "30px";
+                  //       } else if (
+                  //          d.data.has_assigned_siblings === true ||
+                  //          d.data.has_unassigned_siblings === true
+                  //       ) {
+                  //          return "30px";
+                  //       } else {
+                  //          return "0px";
+                  //       }
+                  //    }
+                  // })
+                  // .attr("x", function (d) {
+                  //    if (d.data.name === "Unassigned") {
+                  //       if (
+                  //          d.data.rankName === "realm" &&
+                  //          d.data.taxNodeID !== "legend"
+                  //       ) {
+                  //          return "-15px";
+                  //       } else if (
+                  //          d.data.has_assigned_siblings === true ||
+                  //          d.data.has_unassigned_siblings === true
+                  //       ) {
+                  //          return "-15px";
+                  //       } else {
+                  //          return "0px";
+                  //       }
+                  //    }
+                  // })
+                  // .attr("y", function (d) {
+                  //    if (d.data.name === "Unassigned") {
+                  //       if (
+                  //          d.data.rankName === "realm" &&
+                  //          d.data.taxNodeID !== "legend"
+                  //       ) {
+                  //          return "-15px";
+                  //       } else if (
+                  //          d.data.has_assigned_siblings === true ||
+                  //          d.data.has_unassigned_siblings === true
+                  //       ) {
+                  //          return "-15px";
+                  //       } else {
+                  //          return "0px";
+                  //       }
+                  //    }
+                  // })
                   .attr("dx", settings.node.textDx)
                   .attr("dy", settings.node.textDy)
                   .style("fill", function (d) {
-                     let color = getRankColor(!!d._children, d.data.rankName);
-                     if (!!color) {
-                        return color;
-                     }
+
+                     // lrm 5-23-2024
+                     // this code is no longer needed, this will be taken down later
+                     // if (this === clickedRect) {
+                     //    // console.log(clickedCircle);
+                     //    return "#006CB5";
+                     // } else  if(this !== clickedRect){
+                     //    return "white";
+                     // }
 
                      findParent(d);
                   })
                   .attr("cursor", "pointer");
 
                Update.select("circle.node")
+
+                  // append circle to all nodes but the invisible ghost nodes
                   .attr("r", function (d) {
-                     if (d.data.name !== "Unassigned") {
-                        return settings.node.radius;
-                     } else {
+
+                     if (isGhostNode(d)) {
                         return 0;
+                     } else if (d.data.taxNodeID === "legend") {
+                        return 0;
+                     } else {
+                        return settings.node.radius;
                      }
                   })
+                  
                   .style("fill", function (d) {
-                     let color = getRankColor(!!d._children, d.data.rankName);
-                     if (!!color) {
-                        return color;
+
+                     // lrm 5-20-2024
+                     // update DOM element's appended circle when clicked
+                     if (this === clickedCircle) {
+                        return "#006CB5";
+                     } else  if(this !== clickedCircle){
+                        return "white";
                      }
 
                      findParent(d);
@@ -1151,8 +1282,12 @@ d
                Update.select("text.node-text")
                   .attr("cursor", "pointer")
                   .style("fill", function (d) {
-                     if (selected == d.data.name) {
-                        return d._children ? "#000000" : "#006CB5";
+
+                     // lrm 5-30-2024
+                     // clicked text is the highlighted text
+                     // clickedText is global varible assigned in the click function
+                     if(this == clickedText){
+                        return "#006CB5";
                      } else {
                         return "#000000";
                      }
@@ -1171,7 +1306,18 @@ d
                   .style("font-size", fontSliderEl.property("value") + "rem");
 
                Update.select("text.unassigned-text")
-                  .style("font-size", fontSliderEl.property("value") + "rem");
+                  .style("font-size", fontSliderEl.property("value") + "rem")
+                  .style("fill", function (d) {
+
+                     // lrm 6-10-2024
+                     // clicked text is the highlighted text
+                     // clickedText is global varible assigned in the click function
+                     if(this == clickedText){
+                        return "#006CB5";
+                     } else {
+                        return "#000000";
+                     }
+                  })
                   
                var Exit = children
                   .exit()
@@ -1195,6 +1341,7 @@ d
                   .insert("path", "g")
                   .attr("class", "link")
                   .attr("d", function (d) {
+
                      if (
                         ((d.data.rankName === "subgenus" &&
                            d.data.name == "Unassigned") ||
@@ -1202,9 +1349,13 @@ d
                         d.data.name === "Unassigned"
                      ) {
                         return diagonal(0, 0);
+
                      }
+
                      var pos = { x: source.x0, y: source.y0 };
+
                      return diagonal(pos, pos);
+
                   })
                   .style("stroke-width", "5px")
                   .style("fill", "none")
@@ -1222,107 +1373,46 @@ d
                      }
                   });
 
-                  // const linkNodeColor = document.querySelectorAll('g');
-                  // const textElement = linkNodeColor.querySelector('text');
-
-                  // for (i = 0; i < linkNodeColor.length; i++) {
-                  //    console.log(linkNodeColor[i]);
-                  // }
-                  // const textElement = linkNodeColor.querySelector('text');
-
                // var linkUpdate = linkEnter.merge(link);
-               // linkUpdate
-               //    .transition("path.link")
-               //    .duration(settings.animationDuration)
-               //    .attr("d", function (d) {
-               //       return diagonal(d, d.parent);
-               //    })
-               //    .style("stroke", function (d) {
-               //       if (d.data.name !== "down" || d.data.name !== "up") {
-               //          return d._children ? "#808080" : "#006CB5";
-               //       }
-               //       findParent(d);
-               //    });
-
                var linkUpdate = linkEnter.merge(link);
+                  
+
                linkUpdate
                   .transition("path.link")
                   .duration(settings.animationDuration)
                   .attr("d", function (d) {
-                     return diagonal(d, d.parent);
-                  })
-                  .style("stroke", function (d) {
-                     if (d.data.name !== "down" || d.data.name !== "up") {
-                        return d._children ? "#808080" : "#006CB5";
+
+                     // lrm 6-12-2024
+                     // Do not draw links to ghost nodes
+                     // This helps the link line colors stay consistent
+                     if (!isGhostNode(d)) {
+                        if (isGhostNode(d.parent)) {
+                           return diagonal(findNonGhostParent(d.parent), d);
+                        }
+                        return diagonal(d.parent, d);
                      }
-                     findParent(d);
+                  })
+
+                  // Code to color the links
+                  .style("stroke", function (d) {
+                     // lrm 6-17-2024
+                     // Check if the node is a leaf node and if it's the currently selected node
+                     if ((!d.children && !d._children) && d === selectedNode) {
+                        return "#006CB5";
+                     } else if (d._children) {
+                        return "#808080";
+                     } else if (d.children) {
+                        return "#006CB5";
+                     } else {
+                        return "#808080";
+                     }
+
+                     // original code for link color
+                  //    if (d.data.name !== "down" || d.data.name !== "up") {
+                  //       return d._children ? "#808080" : "#006CB5";
+                  //    }
+                  //    findParent(d);
                   });
-
-                  
-                  const pathLinks = d3.selectAll('path.link');
-                  
-                  pathLinks.transition()
-                  .duration(900)
-                  // .style("stroke")
-                  .end()
-                  .then(() => {
-                      const lastLink = d3.select(pathLinks.nodes()[pathLinks.size() - 1]);
-                      const lastLinkColor = window.getComputedStyle(lastLink.node()).getPropertyValue('stroke');
-                     //  console.log(lastLinkColor);
-                      if (lastLinkColor === "rgb(128, 128, 128)"){
-                          lastLink.style("stroke", "#006CB5");
-                      }
-                     //  console.log(lastLink);
-                  });
-                  
-               // var linkUpdate = linkEnter.merge(link);
-               // linkUpdate
-               //    .transition("path.link")
-               //    .duration(settings.animationDuration)
-               //    .attr("d", function (d) {
-               //       return diagonal(d, d.parent);
-               //    })
-               //    .style("stroke", function (d) {
-               //       if (d.data.name !== "down" || d.data.name !== "up") {
-               //          const gNodes = document.querySelectorAll('g.node');
-               //          for (i = 0; i < gNodes.length; i++) {
-               //             const textElement = gNodes[i].querySelector('text');
-               //             if (textElement.textContent === '') {
-               //                // console.log(textElement);
-               //                return "#006CB5";
-               //             } else {
-               //                return d._children ? "#808080" : "#006CB5";
-               //             }
-               //          }
-               //       }
-               //       findParent(d);
-               //    });
-
-
-               // const selectLinks = document.querySelectorAll('path.link');
-               // // console.log(selectLinks);
-
-               // setTimeout(() => {
-               //    for (let i = 0; i < selectLinks.length; i++) {
-               //       const lastLink = selectLinks[selectLinks.length - 1];
-               //       console.log(lastLink);
-               //       const lastLinkColor = window.getComputedStyle(lastLink).getPropertyValue('stroke');
-               //       // console.log(lastLinkColor);
-               //       if (lastLinkColor !== "rgb(128, 128, 128)") {
-               //          // console.log(lastLinkColor);
-               //          lastLink.style.stroke = "#006CB5";
-               //       }
-               //    }
-               // }, 1000);
-               // const lastLink = allLinks[allLinks.length - 1];
-               // console.log(lastLink);
-               // const lastLinkColor = window.getComputedStyle(lastLink).getPropertyValue('stroke');
-               // console.log(lastLinkColor);
-
-               // if (lastLink) {
-               //    lastLink.style.stroke = "#006CB5";
-               // }
-               // .attr('cursor', 'pointer');
 
                var linkExit = link
                   .exit()
@@ -1381,21 +1471,64 @@ d
 
                function click(event, d) {
                   selected = d.data.name;
+
+                  selectedNode = d;
+
+                  // console.log(d);
                   if (d.data.taxNodeID !== "legend") {
                      if (d.hasOwnProperty("page")) {
                         d.parent.children = d.parent.pages[d.page];
                      } else if (d.children) {
                         d._children = d.children;
                         d.children = null;
-                     } else {
+                     } else if (d._children){
                         d.children = d._children;
                         d._children = null;
                      }
 
+                     // lrm 5-20-2024
+                     // clickedCircle is a  global variable declared at the top of the script
+                     // here it is assigned for the purpose of updating the circle color when clicked
+                     clickedCircle = event.currentTarget.querySelector("circle");
+                     clickedText = event.currentTarget.querySelector("text");
+
                      update(d);
                   }
                }
+               
+               // lrm 5-20-2024
+               // function to determine what is a ghost node
+               function isGhostNode(d) {
+                  if (!d || !d.data) {
+                     return false;
+                 }
 
+                  if (d.data.rank_index === 0) {
+                     // “Tree” has a rank index of zero and a numeric comparison is faster than a string comparison.
+                     return false;
+                  } else if ((d.data.is_assigned) || d.data.has_assigned_siblings) {
+                     return false;
+                  } else if (d.data.taxNodeID === "legend") {
+                     return false;
+                  } else {
+                     return true;
+                  }
+               }
+
+               // Function used in the linkUpdate code to help draw links from non-ghost node parents
+               // Traverses the tree to check node's parents for ghost nodes
+               // It will traverse until it finds a parent that is not a ghost node
+               function findNonGhostParent(node) {
+                  if (node.parent) {
+                      if (isGhostNode(node.parent)) {
+                          return findNonGhostParent(node.parent);
+                      } else {
+                          return node.parent;
+                      }
+                  } else {
+                      return null; // or some default value
+                  }
+              }
 
                // The first parameter is the element that acts as a delegate for child elements with
                // tippy instances. The second parameter defines the tippy instances that will be assigned
@@ -1566,7 +1699,7 @@ d
             }
 
             // lrm 5-10-2024
-            // Reset the color of all nodes to the default color
+            // Reset the color of all text to the default color
             // This ensures the search result node is the
             // only node that is highlighted
             document.querySelectorAll('text.node-text').forEach(textElementReset => {
@@ -1580,31 +1713,28 @@ d
             if (textToHighlight) {
                textToHighlight.style.fill = "#006CB5";
             }
-
-            // Make sure links are blue all the way to the last expanded node
-            const links = document.querySelectorAll('path.link');
-            if (notResultNode) {
-               const textElement = notResultNode.querySelector('text');
-               if (textElement && textElement.textContent === '') {
-                  // directly access the last link and change its style
-                  const lastLink = links[links.length - 1];
-                  if (lastLink) {
-                     lastLink.style.stroke = "#006CB5";
-                  }
-               }
+   
+            // Ensure the search result's circle is blue
+            const circleToHighlight = notResultNode.querySelector('circle');
+            if (circleToHighlight) {
+               circleToHighlight.style.fill = "#006CB5";
             }
             
             // when there is a ghost node, do not dispatch the click event
-            if (notResultNode) {
-               const textElement = notResultNode.querySelector('text');
-               if (textElement && textElement.textContent === '') {
-                  // console.log("Ghost Node: ", nodeId);
-                  resolve();
-                  return;
-               }
-            } else {
-               // console.log(`No node found with data-id "${nodeId}"`);
+            if (notResultNode.getAttribute('ghost-node') === 'true') {
+               resolve();
+               return;
             }
+            // if (notResultNode) {
+            //    const textElement = notResultNode.querySelector('text');
+            //    if (textElement && textElement.textContent === '') {
+            //       // console.log("Ghost Node: ", nodeId);
+            //       resolve();
+            //       return;
+            //    }
+            // } else {
+            //    // console.log(`No node found with data-id "${nodeId}"`);
+            // }
             
             // when index value does not equal the data-id, open the node
             // if it is the target node, stop the loop
@@ -1682,6 +1812,7 @@ d
 
 
 };
+
 function expandTreeToNode(data) {
    let node = traverseTreeToFindNode(ds, data);
    expandTree(node);

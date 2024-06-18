@@ -20,11 +20,11 @@
    <script src="../js/tippy-bundle.umd.js"></script>
    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
    <script src="../js/searchPanel.js"></script>
-   <script src="../js/script.js"></script>
-
+   
+   <!-- html2canvas cdn -->
    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha512-BNaRQnYJYiPSqHHDb58B0yaPfCu+Wgds8Gp/gU33kqBtgNS4tSPHuGibyoeqMV/TJlSKda6FXzoEyYGjTe+vXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-   <!-- <script src="https://unpkg.com/d3-simple-slider"></script> -->
+   <script src="https://unpkg.com/d3-simple-slider"></script>
 </head>
 
 <body>
@@ -50,6 +50,7 @@
       // All ICTV MSL releases
       const releases = {
          data: {
+            r2023: { year: "2023", rankCount: 12, releaseNum: 39 },
             r2022: { year: "2022", rankCount: 12, releaseNum: 38 },
             r2021: { year: "2021", rankCount: 12, releaseNum: 37 },
             r2020: { year: "2020", rankCount: 12, releaseNum: 36 },
@@ -90,6 +91,7 @@
             r1971: { year: "1971", rankCount: 3, releaseNum: 1 }
          },
          displayOrder: [
+            "r2023",
             "r2022",
             "r2021",
             "r2020",
