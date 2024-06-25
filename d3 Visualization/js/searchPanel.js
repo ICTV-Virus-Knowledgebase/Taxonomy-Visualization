@@ -196,8 +196,8 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
          type: "POST",
          url: self.taxonomyURL,
          data: {
-            action_code: "search_visual_taxonomy",
-            // action_code: "search_taxonomy",
+            // action_code: "search_visual_taxonomy",
+            action_code: "search_taxonomy",
             current_release: self.releaseNumber.current,
             include_all_releases: includeAllReleases,
             search_text: searchText,
@@ -239,8 +239,8 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
             `<tr>
                <td class="controls-column">
                   <button class="slim-btn view-search-result-button"
-                     data-id="${searchResult_.jsonID}" 
-                     data-lineage="${searchResult_.jsonLineage}" 
+                     data-taxNodeLineage="${searchResult_.taxnodeLineage}" 
+                     data-taxNodeId="${searchResult_.taxnodeID}" 
                      data-release="${searchResult_.treeName}">View</button>
                   <button class="slim-btn view-history-button"
                      data-id="${searchResult_.taxnodeID}" 
@@ -270,17 +270,17 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
          if (buttonEl.classList.contains("view-search-result-button")) {
 
             // Get the button's lineage attribute.
-            const lineage = buttonEl.getAttribute("data-lineage");
-            if (!lineage) { return self.createError("Invalid lineage"); }
+            const taxNodeId = buttonEl.getAttribute("data-taxNodeId");
+            if (!taxNodeId) { return self.createError("Invalid data-taxNodeId"); }
 
             const releaseNumber = buttonEl.getAttribute("data-release");
             if (!releaseNumber) { return self.createError("Invalid releaseNumber attribute"); }
 
-            const jsonID = buttonEl.getAttribute("data-id");
-            if (!jsonID) { return self.createError("Invalid data-id attribute"); }
+            const taxNodeIdLineage = buttonEl.getAttribute("data-taxNodeLineage");
+            if (!taxNodeIdLineage) { return self.createError("Invalid data-taxNodeLineage attribute"); }
 
             // Pass the lineage and release number to the result selection callback.
-            self.resultSelectionCallback(event_, lineage, releaseNumber, jsonID);
+            self.resultSelectionCallback(event_, taxNodeId, releaseNumber, taxNodeIdLineage);
 
          } else if (buttonEl.classList.contains("view-history-button")) {
             

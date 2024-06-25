@@ -79,6 +79,7 @@ window.ICTV.d3TaxonomyVisualization = function (
          translateY: -(jQuery(window).height() * 0.45), //-1800
       },
    };
+   let notResultNode_ = null;
    var selectedNode;
    var clickedText;
    var clickedCircle;
@@ -218,7 +219,7 @@ window.ICTV.d3TaxonomyVisualization = function (
       selectFormat.selectAll("option")
          // lrm 6-7-2024
          // changed "pdf" to svg
-         .data(["png", "svg"]) // SVG supported now
+         .data(["png", "svg", "pdf"]) // SVG supported now
          .enter()
          .append("option")
          .attr("value", function (d) { return d; })
@@ -411,6 +412,100 @@ window.ICTV.d3TaxonomyVisualization = function (
                svg.removeAttribute('viewBox');
             }
 
+         }
+
+         // lrm 6-20-2024
+         // PDF selection
+         // This export is done via server-side with InkScape's CLI
+         else if (selectedFormat === "pdf") {
+
+            // Select the SVG element
+            let svg = document.querySelector('svg');
+
+            // Store the original viewBox value
+            let originalViewBox = svg.getAttribute('viewBox');
+
+            // Get the bounding box of the SVG content
+            let bbox = svg.getBBox();
+
+            // Set the viewBox attribute to the bounding box dimensions to fit the SVG contents
+            svg.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
+
+            // Create a D3 selection from the SVG
+            let svgSelection = d3.select(svg);
+
+            // Apply inline styles to the SVG elements
+            svgSelection.selectAll('text.legend-node-text')
+               // 64px = 4rem
+               // adobe illustrator did not like rem
+               .style('font-size', '64px')
+               .style('font-style', 'normal')
+               .style('fill', 'black')
+               // adobe illustrator does not read text-transform
+               // instead, use JS to capitalize the first letter for rank columns
+               .text(function (d) {
+                  if (d.data.rankName === "species") {
+                     return;
+                  } else {
+                     return d.data.rankName.charAt(0).toUpperCase() + d.data.rankName.slice(1);
+                  }
+               })
+               // adobe illustrator likes this for text rotation
+               .attr('transform', function (d, i) {
+                  return 'rotate(-45, 50, 50)';
+               });
+
+            svgSelection.selectAll('text.node-text')
+               .style('font-size', '64px')
+               .style('font-style', 'italic')
+               .style('font-weight', 'bold')
+
+            svgSelection.selectAll('text.unassigned-text')
+               .style('font-size', '64px')
+               .style('font-style', 'normal')
+               .style('fill', 'black')
+
+            // Serialize the SVG to a string
+            let serializer = new XMLSerializer();
+            let svgStr = serializer.serializeToString(svg);
+
+            // Send a POST request to the server with the SVG data
+            fetch('/ictv_d3_taxonomy_visualization/pdf_export', {
+               method: 'POST',
+               headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded',
+               },
+               body: `svg=${encodeURIComponent(svgStr)}`,
+            })
+               .then(response => response.blob())
+               .then(blob => {
+
+                  // Create a URL for the Blob object
+                  let url = URL.createObjectURL(blob);
+
+                  // Create a link element and set its href to the Blob URL
+                  let link = document.createElement('a');
+                  link.href = url;
+
+                  // Set the download attribute of the link to specify the file name
+                  link.download = 'image.pdf';
+
+                  // Append the link to the document
+                  document.body.appendChild(link);
+
+                  // Simulate a click on the link
+                  link.click();
+
+                  // Remove the link from the document
+                  document.body.removeChild(link);
+
+                  // Reset or remove the viewBox attribute to its original value
+                  if (originalViewBox) {
+                     svg.setAttribute('viewBox', originalViewBox);
+                  } else {
+                     svg.removeAttribute('viewBox');
+                  }
+               });
          }
 
       });
@@ -623,7 +718,47 @@ window.ICTV.d3TaxonomyVisualization = function (
 
       // TODO: the non-species file shouldn't be opened twice. Improve the code below!!!
       // Load the non-species data for this release.
+      // d3.json(nonSpeciesFilename).then(function (data) {
+         // const ab = d3.hierarchy(data, function (d) {
+         //    if (d.children === null) { return; }
+
+         //    do {
+         //       let str = d.child_counts;
+         //       var result;
+         //       const regex = /(\d+)/;
+         //       if (typeof str === "string" && str.length > 0) {
+         //          if (str.includes("species")) {
+         //             result = str.replace(/, .*species|,.*$/, "");
+         //          } else {
+         //             result = str?.match(regex);
+         //          }
+         //       }
+         //       if (typeof result === "string" && result.length > 0) {
+         //          num = parseInt(result.match(/\d+/)[0]);
+         //          if (num > 500) {
+         //             num = temp;
+         //          } else {
+         //             if (num > temp) {
+         //                arr.push(temp);
+         //                temp = num;
+         //             }
+         //          }
+         //       }
+         //    } while (num >= 1000);
+
+         //    max = Math.max(...arr);
+         //    num_flag = true;
+         //    return d.children; 
+         // });
+      // });
+      
+      // lrm 6-20-2024
+      // nonSpeciesFilename was being loaded twice, I took the commented code above
+      // and put it where it was being loaded a 2nd time.
       d3.json(nonSpeciesFilename).then(function (data) {
+         
+         var genus = false;
+
          const ab = d3.hierarchy(data, function (d) {
             if (d.children === null) { return; }
 
@@ -653,13 +788,8 @@ window.ICTV.d3TaxonomyVisualization = function (
 
             max = Math.max(...arr);
             num_flag = true;
-            return d.children; 
+            return d.children;
          });
-      });
-
-      d3.json(nonSpeciesFilename).then(function (data) {
-         
-         var genus = false;
 
          // Set the width and height available within the SVG.
          const availableHeight =
@@ -879,19 +1009,19 @@ window.ICTV.d3TaxonomyVisualization = function (
                   .append("g")
                   .attr("class", "node")
                   // add attributes to g nodes from JSON data
-                  .attr("data-id", function (d) {
-                     return d.data.json_id;
-                  })
-                  .attr("data-lineage", function (d) {
-                     return d.data.json_lineage;
-                  })
+                  // .attr("data-id", function (d) {
+                  //    return d.data.json_id;
+                  // })
+                  // .attr("data-lineage", function (d) {
+                  //    return d.data.json_lineage;
+                  // })
                   .attr("parent-name", function (d) {
                      return d.data.name;
                   })
                   .attr("parent-rank", function (d) {
                      return d.data.rankName;
                   })
-                  .attr("parent-taxNodeId", function (d) {
+                  .attr("taxNodeId", function (d) {
                      return d.data.taxNodeID;
                   })
                   .attr("has_species", function (d) {
@@ -1530,6 +1660,17 @@ window.ICTV.d3TaxonomyVisualization = function (
                   }
               }
 
+               // function hasSpeciesChild(node) {
+               //    if (node.children) {
+               //       for (let i = 0; i < node.children.length; i++) {
+               //          if (node.children[i].has_species) {
+               //             return true;
+               //          }
+               //       }
+               //    }
+               //    return false;
+               // }
+
                // The first parameter is the element that acts as a delegate for child elements with
                // tippy instances. The second parameter defines the tippy instances that will be assigned
                // to the child elements (qualified by the "target" attribute). 
@@ -1667,7 +1808,12 @@ window.ICTV.d3TaxonomyVisualization = function (
 
    // This function is called when a search result is selected in the searchPanel. A reference to it is 
    // passed as a parameter to the search panel object's "constructor".
-   function selectSearchResult(event_, lineage_, releaseNumber_, ID_) {
+   // lrm 6-21-24
+   // Instead of passing JSON IDs and JSON Lineage, pass taxNodeIDLineage and taxNodeId from callback function in searchPanel.js
+   // JSON IDs were changing when updating DB, this caused the search to break here
+   function selectSearchResult(event_, taxNodeId_, releaseNumber_, taxNodeIdLineage_) {
+
+      // console.log(taxNodeId_);
 
       // Select the specified release.
       releaseControlEl.value = releaseNumber_;
@@ -1681,17 +1827,19 @@ window.ICTV.d3TaxonomyVisualization = function (
 
       async function openNode(nodeId) {
          return new Promise((resolve) => {
-            const notResultNode = document.querySelector(`g[data-id="${nodeId}"]`);
+            let notResultNode = document.querySelector(`g[taxNodeId="${nodeId}"]`);
+            notResultNode_ = notResultNode;
+            // console.log(notResultNode_)
             if (!notResultNode) { 
                console.error(`No node found with data-id "${nodeId}"`); 
                return; 
             }
 
             // Call the displaySpecies function when the node has a species
-            const hasSpecies = notResultNode.getAttribute('has_species');
+            let hasSpecies = notResultNode.getAttribute('has_species');
             const parentName = notResultNode.getAttribute('parent-name');
             const parentRank = notResultNode.getAttribute('parent-rank');
-            const parentTaxNodeID = notResultNode.getAttribute('parent-taxNodeId');
+            const parentTaxNodeID = notResultNode.getAttribute('taxNodeId');
             const children_ = notResultNode.getAttribute('children');
             
             if (hasSpecies !== '0' && children_ === null) {
@@ -1713,6 +1861,12 @@ window.ICTV.d3TaxonomyVisualization = function (
             if (textToHighlight) {
                textToHighlight.style.fill = "#006CB5";
             }
+
+            // lrm 6-24-2024
+            // Reset the circle colors so that you only color the search result circle
+            document.querySelectorAll('circle').forEach(circleElementReset => {
+               circleElementReset.style.fill = "#FFFFFF";
+            });
    
             // Ensure the search result's circle is blue
             const circleToHighlight = notResultNode.querySelector('circle');
@@ -1721,10 +1875,10 @@ window.ICTV.d3TaxonomyVisualization = function (
             }
             
             // when there is a ghost node, do not dispatch the click event
-            if (notResultNode.getAttribute('ghost-node') === 'true') {
-               resolve();
-               return;
-            }
+            // if (notResultNode.getAttribute('ghost-node') === 'true') {
+            //    resolve();
+            //    return;
+            // }
             // if (notResultNode) {
             //    const textElement = notResultNode.querySelector('text');
             //    if (textElement && textElement.textContent === '') {
@@ -1738,8 +1892,10 @@ window.ICTV.d3TaxonomyVisualization = function (
             
             // when index value does not equal the data-id, open the node
             // if it is the target node, stop the loop
-            if (nodeId !== ID_) {
+            if (nodeId !== taxNodeId_) {
                notResultNode.dispatchEvent(new Event("click"));
+               // Store the node that had a simulated click
+               simulatedClicks = notResultNode;
             } else {
                //console.log("Reached the target node: ", ID_);
                resolve();
@@ -1754,7 +1910,7 @@ window.ICTV.d3TaxonomyVisualization = function (
 
       async function openNodes() {
          // take the commas out of the array
-         const lineage_array = lineage_.split(",");
+         const lineage_array = taxNodeIdLineage_.split(",");
          for (let i = 1; i < lineage_array.length; i++) {
             await openNode(lineage_array[i]);
          }
