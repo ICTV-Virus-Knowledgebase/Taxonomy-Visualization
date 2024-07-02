@@ -65,9 +65,9 @@ BEGIN
 		--==========================================================================================================
 		SET @dataJSON = @dataJSON + 
 			'"'+@yearAB+'": { '+
-				'"year": "'+@yearAB+'", '+
-				'"rankCount": '+CAST(@rankCount AS VARCHAR(3))+', '+
-				'"releaseNum": '+CAST(@mslReleaseNum AS VARCHAR(3))+'},'
+         '"year": "'+@yearAB+'", '+
+         '"rankCount": '+CAST(@rankCount AS VARCHAR(3))+', '+
+         '"releaseNum": '+CAST(@mslReleaseNum AS VARCHAR(3))+'},'
 
 		--==========================================================================================================
 		-- Add this release to the display order JSON fragment.

@@ -86,33 +86,25 @@ def exportTaxonomyJSON(dbServer_, ictvDB_, mslReleaseNum_):
          treeName = str(row.name)
 
          # Delete existing versions of the JSON files for this release.
-         deleteCMD = (f"del \"JSON\\*Species_{treeName}.json")
+         deleteCMD = (f"del \"JSON\\taxonomy_{treeName}.json")
          subprocess.run(deleteCMD, shell=True)
 
          # Create the command line text to run sqlcmd for non-species taxa.
          nonSpeciesCMD = (f"sqlcmd -S {dbServer_} "
-               f"-Q \"EXEC [{ictvDB_}].dbo.exportNonSpeciesTaxonomyJSON @treeID = {treeID}\" "
-               f"-o \"JSON\\nonSpecies_{treeName}.json\" "
+               f"-Q \"EXEC [{ictvDB_}].dbo.exportTaxonomyJSON @treeID = {treeID}\" "
+               f"-o \"JSON\\taxonomy_{treeName}.json\" "
                "-y 0 ")
 
          # Run the command
          subprocess.run(nonSpeciesCMD, shell=True)
 
-         # Create the command line text to run sqlcmd for species taxa.
-         speciesCMD = (f"sqlcmd -S {dbServer_} "
-               f"-Q \"EXEC [{ictvDB_}].dbo.exportSpeciesTaxonomyJSON @treeID = {treeID}\" "
-               f"-o \"JSON\\species_{treeName}.json\" "
-               "-y 0 ")
-
-         # Run the command
-         subprocess.run(speciesCMD, shell=True)
 
 
+# Example usage: py exportTaxonomyJSON.py --dbServer "ICTVDEV" --ictvDB "ICTVonline39" --release 39
 
 if __name__ == '__main__':
 
    parser = argparse.ArgumentParser(description="Export one or more MSL releases from the taxonomy_json table and save as JSON files.")
-
    parser.add_argument("--dbServer", dest="dbServer", metavar='SERVER_NAME', nargs=1, required=True, help="The database server name")
    parser.add_argument("--ictvDB", dest="ictvDB", metavar='ICTV_DB', nargs=1, required=True, help="The database name")
    parser.add_argument("--release", dest="release", metavar='N', required=False, nargs="?", type=int, help="An MSL release number")
