@@ -48,6 +48,7 @@ window.ICTV.d3TaxonomyVisualization = function (
    // Configuration settings (to replace hard-coded values below)
    const settings = {
       animationDuration: 900,
+      animationDelay: 1100,
       node: {
          radius: 17.5,
          strokeWidth: 3,
@@ -79,7 +80,14 @@ window.ICTV.d3TaxonomyVisualization = function (
          translateY: -(jQuery(window).height() * 0.45), //-1800
       },
    };
-   let notResultNode_ = null;
+
+   // This is used by openNode() to maintain details of the previously selected node.
+   let previousNode = {
+      parentTaxNodeID: null,
+      parentRankIndex: NaN
+   }
+
+   var currentFontSize;
    var selectedNode;
    var clickedText;
    var clickedCircle;
@@ -311,6 +319,15 @@ window.ICTV.d3TaxonomyVisualization = function (
                         svg.removeAttribute('viewBox');
                      }
 
+                     // Reset font slider if it is at a value > 4
+                     // currentFontSize is a global varible assigned to the fontSliderE1 value
+                     if (currentFontSize > 4) {
+                        fontSliderEl.property("value", 4);
+                        font = "4rem";
+                        currentFontSize = 4;
+                        d3.selectAll('text').style("font-size", font);
+                     }
+
                      // Resolve the promise with the image data
                      resolve(imgData);
                   };
@@ -412,6 +429,15 @@ window.ICTV.d3TaxonomyVisualization = function (
                svg.removeAttribute('viewBox');
             }
 
+            // Reset font slider if it is at a value > 4
+            // currentFontSize is a global varible assigned to the fontSliderE1 value
+            if (currentFontSize > 4) {
+               fontSliderEl.property("value", 4);
+               font = "4rem";
+               currentFontSize = 4;
+               d3.selectAll('text').style("font-size", font);
+            }
+
          }
 
          // lrm 6-20-2024
@@ -505,6 +531,16 @@ window.ICTV.d3TaxonomyVisualization = function (
                   } else {
                      svg.removeAttribute('viewBox');
                   }
+
+                  // Reset font slider if it is at a value > 4
+                  // currentFontSize is a global varible assigned to the fontSliderE1 value
+                  if (currentFontSize > 4) {
+                     fontSliderEl.property("value", 4);
+                     font = "4rem";
+                     currentFontSize = 4;
+                     d3.selectAll('text').style("font-size", font);
+                  }
+
                });
          }
 
@@ -535,10 +571,10 @@ window.ICTV.d3TaxonomyVisualization = function (
       if (!releaseYear) { throw new Error("Invalid release year in getRelease (empty)"); }
 
       // when running in local environment, use the r
-      const release = releases.data[`r${releaseYear}`];
+      const release = releases.data[`${releaseYear}`];
 
       // when uploading to drupal, use only the year
-      // const release = releases.data[`${releaseYear}`];
+      // const release = releases.data[`r${releaseYear}`];
       if (!release) { throw new Error(`No release found for release year ${releaseYear}`); }
 
       return release;
@@ -607,6 +643,8 @@ window.ICTV.d3TaxonomyVisualization = function (
       fontSliderEl.on("input", function (e) {
          const fontSize = e.target.value;
          font = fontSize + "rem";
+
+         currentFontSize = fontSize;
 
          // Constrain the font size change to the taxonomy panel.
          const treeTextSelector = `${containerSelector} .taxonomy-panel text`;
@@ -706,15 +744,16 @@ window.ICTV.d3TaxonomyVisualization = function (
       // Format the release year for use as part of a JSON filename.
       let filenameReleaseYear = releaseYear_.replace(/a$/, "").replace(/b$/, ".5");
 
-      // Determine the filenames for the non-species and species JSON files.
-      const nonSpeciesFilename = `${dataURL}/data/nonSpecies_${filenameReleaseYear}.json`;
-      const speciesFilename = `${dataURL}/data/species_${filenameReleaseYear}.json`;
+      // Determine the filename for the taxonomy JSON file.
+      const jsonFilename = `${dataURL}/data/taxonomy_${filenameReleaseYear}.json`;
+      //const nonSpeciesFilename = `${dataURL}/data/nonSpecies_${filenameReleaseYear}.json`;
+      //const speciesFilename = `${dataURL}/data/species_${filenameReleaseYear}.json`;
 
       // Load the species data for this release.
-      speciesData = await d3.json(speciesFilename).then(function (s) { return s; });
+      /*speciesData = await d3.json(speciesFilename).then(function (s) { return s; });
       if (!speciesData) {
          throw new Error(`Invalid species data for release ${release_}`);
-      }
+      }*/
 
       // TODO: the non-species file shouldn't be opened twice. Improve the code below!!!
       // Load the non-species data for this release.
@@ -755,7 +794,7 @@ window.ICTV.d3TaxonomyVisualization = function (
       // lrm 6-20-2024
       // nonSpeciesFilename was being loaded twice, I took the commented code above
       // and put it where it was being loaded a 2nd time.
-      d3.json(nonSpeciesFilename).then(function (data) {
+      d3.json(jsonFilename).then(function (data) {
          
          var genus = false;
 
@@ -1038,6 +1077,12 @@ window.ICTV.d3TaxonomyVisualization = function (
                         return "true";
                      }
                   })
+                  .attr("parentTaxNodeID", function (d) {
+                     return d.data.parentTaxNodeID;
+                  })
+                  .attr("rank_index", function (d) {
+                     return d.data.rankIndex;
+                  })
                   .attr("transform", function (d) {
                      if (!d || isNaN(source.x0) || isNaN(source.y0)) {
                         return null;
@@ -1192,11 +1237,6 @@ window.ICTV.d3TaxonomyVisualization = function (
                      // Do not display species in legend
                      if (d.data.name === "Unassigned" || d.data.rankName === "tree") {
                         if (d.data.taxNodeID === "legend") {
-                           // Don't display "species" in the legend.
-                           if (d.data.rankName === "species") {
-                              // return "Species"; if you want to display "Species" in the rank column
-                              return "";
-                           }
                            return d.data.rankName;
                         } else if (
                            d.data.rankName === "realm" ||
@@ -1709,12 +1749,12 @@ window.ICTV.d3TaxonomyVisualization = function (
                      // The HTML content to display in the tooltip.
                      const html =
                         `<div class="ictv-tax-viz-tooltip">
-                                    <div class="rank-and-name">${rankName}&nbsp;<i>${name}</i></div>
-                                    <div class="child-count">${childHTML}</div>
-                                    <div class="history">
-                                        <a href="${taxonDetailsURL}?taxnode_id=${taxNodeID}" target="_blank">View taxon history</a>
-                                    </div>
-                                </div>`;
+                           <div class="rank-and-name">${rankName}&nbsp;<i>${name}</i></div>
+                           <div class="child-count">${childHTML}</div>
+                           <div class="history">
+                                 <a href="${taxonDetailsURL}?taxnode_id=${taxNodeID}&taxon_name=${name}" target="_blank">View taxon history</a>
+                           </div>
+                        </div>`;
 
                      instance.setContent(html);
                   },
@@ -1813,7 +1853,7 @@ window.ICTV.d3TaxonomyVisualization = function (
    // JSON IDs were changing when updating DB, this caused the search to break here
    function selectSearchResult(event_, taxNodeId_, releaseNumber_, taxNodeIdLineage_) {
 
-      // console.log(taxNodeId_);
+      console.log(`in selectSearchResult: taxNodeId_ = ${taxNodeId_}, taxNodeIdLineage_ = ${taxNodeIdLineage_}`);
 
       // Select the specified release.
       releaseControlEl.value = releaseNumber_;
@@ -1825,6 +1865,99 @@ window.ICTV.d3TaxonomyVisualization = function (
 
       clearButtonEl.dispatchEvent(new Event("click"));
 
+
+      // dmd testing 070224
+      async function openNode(nodeId) {
+         
+         // The number of the current attempt to find nodeID's taxonomy node
+         let attempt = 0;
+
+         // How many times should we iterate over rank indices trying to find the taxonomy node?
+         // TODO: This should probably be the max depth from tree to species.
+         const maxAttempts = 12; 
+
+         // The DOM node we're looking for.
+         let selectedNode = null;
+
+         // Keep iterating until nodeID's taxonomy node is visible.
+         while (attempt < maxAttempts) {
+
+            // Is the taxonomy node visible yet?
+            selectedNode = document.querySelector(`g[taxNodeId="${nodeId}"]`);
+            if (!!selectedNode) {
+
+               // Success: We found the taxonomy node!
+               // Update previous node with the taxonomy node's rank index and taxNode ID.
+               previousNode.parentRankIndex = parseInt(selectedNode.getAttribute("rank_index"));
+               previousNode.parentTaxNodeID = selectedNode.getAttribute("taxNodeId");
+
+               if (nodeId !== taxNodeId_) {
+                  // Click the node, pause, and resolve. 
+                  selectedNode.dispatchEvent(new Event("click"));
+               }
+               
+               break;
+
+            } else {
+
+               // Increment the previous rank index.
+               previousNode.parentRankIndex += 1;
+
+               // Try to select a ghost node.
+               selectedNode = document.querySelector(`g[parentTaxNodeId="${previousNode.parentTaxNodeID}"][is_assigned="false"][rank_index="${previousNode.parentRankIndex}"]`);
+               if (!!selectedNode) { 
+
+                  const unassignedText = selectedNode.querySelector("text.unassigned-text");
+                  if (!!unassignedText) {
+
+                     // We found the "Unassigned" ghost node.
+                     // Update previous node
+                     previousNode.parentRankIndex += 1;
+
+                     // Click the ghost node and pause.
+                     selectedNode.dispatchEvent(new Event("click"));
+                     await wait(settings.animationDelay);
+                  }
+               }
+            }
+
+            attempt += 1;
+         }
+
+         // lrm 5-10-2024
+         // Reset the color of all text to the default color
+         // This ensures the search result node is the
+         // only node that is highlighted
+         document.querySelectorAll('text.node-text').forEach(textElementReset => {
+            textElementReset.style.fill = "#000000";
+         });
+
+         // Highlight the last expanded node/search result node
+         // This only works for searching nodes
+         const textToHighlight = selectedNode.querySelector('text');
+         if (textToHighlight) {
+            textToHighlight.style.fill = "#006CB5";
+         }
+
+         // lrm 6-24-2024
+         // Reset the circle colors so that you only color the search result circle
+         document.querySelectorAll('circle').forEach(circleElementReset => {
+            circleElementReset.style.fill = "#FFFFFF";
+         });
+
+         
+         // Ensure the search result's circle is blue
+         const circleToHighlight = selectedNode.querySelector('circle');
+         if (circleToHighlight) {
+            circleToHighlight.style.fill = "#006CB5";
+         }
+
+         await wait(settings.animationDelay);
+         return;
+      }
+
+
+      /*
       async function openNode(nodeId) {
          return new Promise((resolve) => {
             let notResultNode = document.querySelector(`g[taxNodeId="${nodeId}"]`);
@@ -1906,17 +2039,23 @@ window.ICTV.d3TaxonomyVisualization = function (
             setTimeout(resolve, 1100);
             return; // dmd 043024
          });
-      }
+      }*/
 
       async function openNodes() {
-         // take the commas out of the array
+
+         // Split the delimited string into an array.
          const lineage_array = taxNodeIdLineage_.split(",");
+
+         // Initialize the previous node.
+         previousNode.parentRankIndex = 0;
+         previousNode.parentTaxNodeID = lineage_array[0];
+
          for (let i = 1; i < lineage_array.length; i++) {
             await openNode(lineage_array[i]);
          }
       }
 
-      setTimeout(openNodes, 1000);
+      setTimeout(openNodes, settings.animationDelay);
 
       // TODO: Use lineage to select taxa nodes after the tree has been refreshed
 
@@ -1988,7 +2127,10 @@ function traverseTreeToFindNode(currentNode, node) {
    return null;
 }
 
-
-
+async function wait(t) {
+   return new Promise((resolve) => {
+      setTimeout(resolve, t);
+   })
+}
 
 
