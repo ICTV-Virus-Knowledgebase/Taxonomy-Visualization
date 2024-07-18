@@ -239,11 +239,13 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
             `<tr>
                <td class="controls-column">
                   <button class="slim-btn view-search-result-button"
-                     data-taxNodeLineage="${searchResult_.taxnodeLineage}" 
-                     data-taxNodeId="${searchResult_.taxnodeID}" 
+                     data-displayOrder="${searchResult_.displayOrder}"
+                     data-parentTaxNodeID="${searchResult_.parentTaxnodeID}"
+                     data-taxNodeLineage="${searchResult_.taxnodeLineage}"
+                     data-taxNodeId="${searchResult_.taxnodeID}"
                      data-release="${searchResult_.treeName}">View</button>
                   <button class="slim-btn view-history-button"
-                     data-id="${searchResult_.taxnodeID}" 
+                     data-id="${searchResult_.taxnodeID}"
                      data-name="${searchResult_.name}">History</button>
                </td>
                <td class="release-name">${searchResult_.treeName}</td>
@@ -279,8 +281,14 @@ window.ICTV.SearchPanel = function (currentReleaseNumber_, resultSelectionCallba
             const taxNodeIdLineage = buttonEl.getAttribute("data-taxNodeLineage");
             if (!taxNodeIdLineage) { return self.createError("Invalid data-taxNodeLineage attribute"); }
 
+            let displayOrder = buttonEl.getAttribute("data-displayOrder");
+            if (!displayOrder) { displayOrder = "0"; }
+ 
+            const parentTaxNodeID = buttonEl.getAttribute("data-parentTaxNodeID");
+            if (!parentTaxNodeID) { return self.createError("Invalid data-parentTaxNodeID"); }
+
             // Pass the lineage and release number to the result selection callback.
-            self.resultSelectionCallback(event_, taxNodeId, releaseNumber, taxNodeIdLineage);
+            self.resultSelectionCallback(event_, displayOrder, parentTaxNodeID, taxNodeId, releaseNumber, taxNodeIdLineage);
 
          } else if (buttonEl.classList.contains("view-history-button")) {
             

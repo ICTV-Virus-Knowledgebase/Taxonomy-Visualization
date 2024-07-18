@@ -47,6 +47,7 @@ window.ICTV.d3TaxonomyVisualization = function (
    
    // Configuration settings (to replace hard-coded values below)
    const settings = {
+      pageSize: 50,
       animationDuration: 900,
       animationDelay: 1100,
       node: {
@@ -81,12 +82,24 @@ window.ICTV.d3TaxonomyVisualization = function (
       },
    };
 
+   // Global variables
+
    // This is used by openNode() to maintain details of the previously selected node.
    let previousNode = {
       parentTaxNodeID: null,
       parentRankIndex: NaN
    }
 
+   const paginationData = {
+      // The display order of a target child node.
+      childDisplayOrder: NaN,
+      // The (string) parent taxnode ID of the target child node.
+      parentTaxnodeID: null
+   }
+
+   // nodeHeight is used in pageNodes() to determine which page to display when searching
+   var nodeHeight = null;
+   var globalTaxNodeId = null;
    var currentFontSize;
    var selectedNode;
    var clickedText;
@@ -110,12 +123,12 @@ window.ICTV.d3TaxonomyVisualization = function (
    // }
 
    // Get and validate the species panel's parent name Element.
-   const speciesParentEl = document.querySelector(`${containerSelector} .species-panel .parent-name`);
-   if (!speciesParentEl) { throw new Error("Invalid parent name element"); }
+   // const speciesParentEl = document.querySelector(`${containerSelector} .species-panel .parent-name`);
+   // if (!speciesParentEl) { throw new Error("Invalid parent name element"); }
 
    // Get and validate the species panel's species list Element.
-   const speciesListEl = document.querySelector(`${containerSelector} .species-panel .species-list`);
-   if (!speciesListEl) { throw new Error("Invalid species list element"); }
+   // const speciesListEl = document.querySelector(`${containerSelector} .species-panel .species-list`);
+   // if (!speciesListEl) { throw new Error("Invalid species list element"); }
 
    // The DOM Element for the font size panel and slider (these are assigned in "iniitializeFontSizePanel").
    let fontSizePanelEl = null;
@@ -156,10 +169,10 @@ window.ICTV.d3TaxonomyVisualization = function (
 
    
    // Clear the contents of the species panel.
-   function clearSpeciesPanel() {
-      speciesParentEl.innerHTML = "";
-      speciesListEl.innerHTML = "";
-   }
+   // function clearSpeciesPanel() {
+   //    speciesParentEl.innerHTML = "";
+   //    speciesListEl.innerHTML = "";
+   // }
 
    // Populate the species panel.
    // Note: The parameters should've been validated before this function is called.
@@ -374,13 +387,13 @@ window.ICTV.d3TaxonomyVisualization = function (
                .style('fill', 'black')
                // adobe illustrator does not read text-transform
                // instead, use JS to capitalize the first letter for rank columns
-               .text(function (d) {
-                  if (d.data.rankName === "species") {
-                     return;
-                  } else {
-                  return d.data.rankName.charAt(0).toUpperCase() + d.data.rankName.slice(1);
-                  }
-               })
+               // .text(function (d) {
+               //    if (d.data.rankName === "species") {
+               //       return;
+               //    } else {
+               //    return d.data.rankName.charAt(0).toUpperCase() + d.data.rankName.slice(1);
+               //    }
+               // })
                // adobe illustrator likes this for text rotation
                .attr('transform', function (d, i) {
                   return 'rotate(-45, 50, 50)';
@@ -469,13 +482,13 @@ window.ICTV.d3TaxonomyVisualization = function (
                .style('fill', 'black')
                // adobe illustrator does not read text-transform
                // instead, use JS to capitalize the first letter for rank columns
-               .text(function (d) {
-                  if (d.data.rankName === "species") {
-                     return;
-                  } else {
-                     return d.data.rankName.charAt(0).toUpperCase() + d.data.rankName.slice(1);
-                  }
-               })
+               // .text(function (d) {
+               //    if (d.data.rankName === "species") {
+               //       return;
+               //    } else {
+               //       return d.data.rankName.charAt(0).toUpperCase() + d.data.rankName.slice(1);
+               //    }
+               // })
                // adobe illustrator likes this for text rotation
                .attr('transform', function (d, i) {
                   return 'rotate(-45, 50, 50)';
@@ -571,10 +584,10 @@ window.ICTV.d3TaxonomyVisualization = function (
       if (!releaseYear) { throw new Error("Invalid release year in getRelease (empty)"); }
 
       // when running in local environment, use the r
-      const release = releases.data[`${releaseYear}`];
+      const release = releases.data[`r${releaseYear}`];
 
       // when uploading to drupal, use only the year
-      // const release = releases.data[`r${releaseYear}`];
+      // const release = releases.data[`${releaseYear}`];
       if (!release) { throw new Error(`No release found for release year ${releaseYear}`); }
 
       return release;
@@ -695,7 +708,7 @@ window.ICTV.d3TaxonomyVisualization = function (
          searchPanel.releaseNumber.selected = release.releaseNum;
 
          // Clear the species panel
-         clearSpeciesPanel();
+         // clearSpeciesPanel();
 
          // Display the taxonomy of the selected release.
          await displayReleaseTaxonomy(releaseYear);
@@ -950,43 +963,64 @@ window.ICTV.d3TaxonomyVisualization = function (
             ////ds.x0 = (availableHeight / 4);
             //ds.y0 = -100;
 
-            function pageNodes(d, maxNode) {
+            function pageNodes(d, pageSize) {
 
-               if (d.children) {
-                  d.children.forEach((c) => pageNodes(c, maxNode));
-                  if (d.children.length > maxNode) {
-                     d.pages = {};
-                     const count = maxNode - 2;
-                     const l = Math.ceil(d.children.length / count);
-                     for (let i = 0; i < l; i++) {
-                        let startRange = i * count;
-                        let endRange = i * count + count;
-                        d.pages[i] = d.children.slice(startRange, endRange);
-                        d.pages[i].unshift({
-                           ...d.pages[i][0],
-                           data: {
-                              name: "Up",
-                              rankName: "Shift",
-                              rankIndex: rankCount - 2,
-                           },
-                           page: i == 0 ? l - 1 : i - 1,
-                        });
-                        d.pages[i].push({
-                           ...d.pages[i][0],
-                           data: {
-                              name: "Down",
-                              rankName: "Shift",
-                              rankIndex: rankCount - 2,
-                           },
-                           page: i != l - 1 ? i + 1 : 0,
-                        });
-                     }
-                     d.children = d.pages[0];
+               if (!d.children) { return; }
+
+               d.children.forEach((c) => pageNodes(c, pageSize));
+               if (d.children.length > pageSize) {
+
+                  d.pages = [];
+                  const count = pageSize - 2; // dmd 070824 Are we subtracting 2 to allow for "up" and "down"?
+                  const pageCount = Math.ceil(d.children.length / count);
+
+                  // Iterate over all pages.
+                  for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
+
+                     // The start and end indices for the current page.
+                     let startRange = pageIndex * count;
+                     let endRange = startRange + count;
+
+                     // Add the child nodes to the page.
+                     d.pages[pageIndex] = d.children.slice(startRange, endRange);
+
+                     // I think this adds the "up" node before the page's child nodes.
+                     d.pages[pageIndex].unshift({
+                        ...d.pages[pageIndex][0],
+                        data: {
+                           name: "More...",
+                           rankName: "Shift",
+                           rankIndex: rankCount - 2, // dmd 070824: What is this doing?
+                        },
+                        page: pageIndex == 0 ? pageCount - 1 : pageIndex - 1,
+                     });
+
+                     // I think this adds the "down" node after the page's child nodes.
+                     d.pages[pageIndex].push({
+                        ...d.pages[pageIndex][0],
+                        data: {
+                           name: "More...",
+                           rankName: "Shift",
+                           rankIndex: rankCount - 2,
+                        },
+                        page: pageIndex != pageCount - 1 ? pageIndex + 1 : 0,
+                     });
                   }
+
+                  // The default page index
+                  let pageIndex = 0;
+
+                  if (!!d.data.parentTaxNodeID && paginationData.parentTaxnodeID == d.data.parentTaxNodeID && !isNaN(paginationData.childDisplayOrder)) {
+                     pageIndex = Math.floor((paginationData.childDisplayOrder - 1) / count);
+                     // console.log(`pageIndex is now ${pageIndex}`)
+                  }
+
+                  // Select the current page by index.
+                  d.children = d.pages[pageIndex];
                }
             }
 
-            ds.children.forEach((c) => pageNodes(c, 90));
+            ds.children.forEach((c) => pageNodes(c, settings.pageSize));
 
             ds.children.forEach(collapse);
 
@@ -1060,7 +1094,7 @@ window.ICTV.d3TaxonomyVisualization = function (
                   .attr("parent-rank", function (d) {
                      return d.data.rankName;
                   })
-                  .attr("taxNodeId", function (d) {
+                  .attr("taxNodeID", function (d) {
                      return d.data.taxNodeID;
                   })
                   .attr("has_species", function (d) {
@@ -1253,25 +1287,25 @@ window.ICTV.d3TaxonomyVisualization = function (
                   .attr("fill", function (d) {
                      return "#000000";
                   })
-                  .on("click", function (e, d) {
+                  // .on("click", function (e, d) {
 
-                     // TODO: why is the value reset here?
-                     fontSliderEl.attr("value", 4);
+                  //    // TODO: why is the value reset here?
+                  //    fontSliderEl.attr("value", 4);
 
-                     if (!d.data.name || d.data.name.length < 1 || d.data.name === "Unassigned" ||
-                        !d.data.rankName || d.data.rankName.length < 1 ||
-                        !d.data.taxNodeID || isNaN(parseInt(d.data.taxNodeID)) ||
-                        !d.data.has_species) {
+                  //    if (!d.data.name || d.data.name.length < 1 || d.data.name === "Unassigned" ||
+                  //       !d.data.rankName || d.data.rankName.length < 1 ||
+                  //       !d.data.taxNodeID || isNaN(parseInt(d.data.taxNodeID)) ||
+                  //       !d.data.has_species) {
 
-                        // Clear the species panel
-                        return clearSpeciesPanel();
+                  //       // Clear the species panel
+                  //       return clearSpeciesPanel();
 
-                     } else {
+                  //    } else {
 
-                        // Populate the species panel
-                        return displaySpecies(d.data.name, d.data.rankName, d.data.taxNodeID);
-                     }
-                  })
+                  //       // Populate the species panel
+                  //       return displaySpecies(d.data.name, d.data.rankName, d.data.taxNodeID);
+                  //    }
+                  // })
                   .attr("dx", settings.node.textDx)
                   .attr("dy", settings.node.textDy)
                   .call(getBB);
@@ -1696,7 +1730,7 @@ window.ICTV.d3TaxonomyVisualization = function (
                           return node.parent;
                       }
                   } else {
-                      return null; // or some default value
+                      return null;
                   }
               }
 
@@ -1851,9 +1885,13 @@ window.ICTV.d3TaxonomyVisualization = function (
    // lrm 6-21-24
    // Instead of passing JSON IDs and JSON Lineage, pass taxNodeIDLineage and taxNodeId from callback function in searchPanel.js
    // JSON IDs were changing when updating DB, this caused the search to break here
-   function selectSearchResult(event_, taxNodeId_, releaseNumber_, taxNodeIdLineage_) {
+   function selectSearchResult(event_, displayOrder_, parentTaxNodeID_, taxNodeId_, releaseNumber_, taxNodeIdLineage_) {
 
-      console.log(`in selectSearchResult: taxNodeId_ = ${taxNodeId_}, taxNodeIdLineage_ = ${taxNodeIdLineage_}`);
+      // Update the global pagination data.
+      paginationData.childDisplayOrder = parseInt(displayOrder_);
+      paginationData.parentTaxnodeID = parseInt(parentTaxNodeID_);
+
+      // console.log(`in selectSearchResult: taxNodeId_ = ${taxNodeId_}, taxNodeIdLineage_ = ${taxNodeIdLineage_}, displayOrder_ = ${displayOrder_}`);
 
       // Select the specified release.
       releaseControlEl.value = releaseNumber_;
@@ -1955,91 +1993,6 @@ window.ICTV.d3TaxonomyVisualization = function (
          await wait(settings.animationDelay);
          return;
       }
-
-
-      /*
-      async function openNode(nodeId) {
-         return new Promise((resolve) => {
-            let notResultNode = document.querySelector(`g[taxNodeId="${nodeId}"]`);
-            notResultNode_ = notResultNode;
-            // console.log(notResultNode_)
-            if (!notResultNode) { 
-               console.error(`No node found with data-id "${nodeId}"`); 
-               return; 
-            }
-
-            // Call the displaySpecies function when the node has a species
-            let hasSpecies = notResultNode.getAttribute('has_species');
-            const parentName = notResultNode.getAttribute('parent-name');
-            const parentRank = notResultNode.getAttribute('parent-rank');
-            const parentTaxNodeID = notResultNode.getAttribute('taxNodeId');
-            const children_ = notResultNode.getAttribute('children');
-            
-            if (hasSpecies !== '0' && children_ === null) {
-               displaySpecies(parentName, parentRank, parentTaxNodeID);
-            }
-
-            // lrm 5-10-2024
-            // Reset the color of all text to the default color
-            // This ensures the search result node is the
-            // only node that is highlighted
-            document.querySelectorAll('text.node-text').forEach(textElementReset => {
-               textElementReset.style.fill = "#000000";
-            });
-
-            // Highlight the last expanded node/search result node
-            // This only works for searching nodes
-            const textToHighlight = notResultNode.querySelector('text');
-            // console.log("textToHighlight: ", textToHighlight);
-            if (textToHighlight) {
-               textToHighlight.style.fill = "#006CB5";
-            }
-
-            // lrm 6-24-2024
-            // Reset the circle colors so that you only color the search result circle
-            document.querySelectorAll('circle').forEach(circleElementReset => {
-               circleElementReset.style.fill = "#FFFFFF";
-            });
-   
-            // Ensure the search result's circle is blue
-            const circleToHighlight = notResultNode.querySelector('circle');
-            if (circleToHighlight) {
-               circleToHighlight.style.fill = "#006CB5";
-            }
-            
-            // when there is a ghost node, do not dispatch the click event
-            // if (notResultNode.getAttribute('ghost-node') === 'true') {
-            //    resolve();
-            //    return;
-            // }
-            // if (notResultNode) {
-            //    const textElement = notResultNode.querySelector('text');
-            //    if (textElement && textElement.textContent === '') {
-            //       // console.log("Ghost Node: ", nodeId);
-            //       resolve();
-            //       return;
-            //    }
-            // } else {
-            //    // console.log(`No node found with data-id "${nodeId}"`);
-            // }
-            
-            // when index value does not equal the data-id, open the node
-            // if it is the target node, stop the loop
-            if (nodeId !== taxNodeId_) {
-               notResultNode.dispatchEvent(new Event("click"));
-               // Store the node that had a simulated click
-               simulatedClicks = notResultNode;
-            } else {
-               //console.log("Reached the target node: ", ID_);
-               resolve();
-               return;
-            }
-
-            // waiting set time for promise to resolve
-            setTimeout(resolve, 1100);
-            return; // dmd 043024
-         });
-      }*/
 
       async function openNodes() {
 
