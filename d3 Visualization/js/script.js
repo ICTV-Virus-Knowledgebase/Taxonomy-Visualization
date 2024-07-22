@@ -465,8 +465,10 @@ window.ICTV.d3TaxonomyVisualization = function (
             // Get the bounding box of the SVG content
             let bbox = svg.getBBox();
 
+            let padding = 150;
+
             // Set the viewBox attribute to the bounding box dimensions to fit the SVG contents
-            svg.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
+            svg.setAttribute('viewBox', `${bbox.x - padding} ${bbox.y - padding} ${bbox.width + 2 * padding} ${bbox.height + 2 * padding}`);
 
             // Create a D3 selection from the SVG
             let svgSelection = d3.select(svg);
