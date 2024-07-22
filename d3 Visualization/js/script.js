@@ -176,46 +176,46 @@ window.ICTV.d3TaxonomyVisualization = function (
 
    // Populate the species panel.
    // Note: The parameters should've been validated before this function is called.
-   function displaySpecies(parentName, parentRank, parentTaxNodeID) {
+   // function displaySpecies(parentName, parentRank, parentTaxNodeID) {
 
-      // Populate the parent name panel.
-      speciesParentEl.innerHTML = `Species of <span class="parent-rank">${parentRank}</span><br/><em>${parentName}<\em>`;
+   //    // Populate the parent name panel.
+   //    speciesParentEl.innerHTML = `Species of <span class="parent-rank">${parentRank}</span><br/><em>${parentName}<\em>`;
 
-      // Convert the taxnode ID to a string so it can be used as a key in the species data.
-      const strTaxNodeID = new String(parentTaxNodeID);
+   //    // Convert the taxnode ID to a string so it can be used as a key in the species data.
+   //    const strTaxNodeID = new String(parentTaxNodeID);
 
-      // Get all species associated with the parent.
-      const speciesArray = speciesData[strTaxNodeID];
-      if (!speciesArray || speciesArray.length < 1) {
+   //    // Get all species associated with the parent.
+   //    const speciesArray = speciesData[strTaxNodeID];
+   //    if (!speciesArray || speciesArray.length < 1) {
 
-         // Display a message in the species list.
-         speciesListEl.innerHTML = "No species available";
-         return;
-      }
+   //       // Display a message in the species list.
+   //       speciesListEl.innerHTML = "No species available";
+   //       return;
+   //    }
 
-      // Initialize the species list panel.
-      speciesListEl.innerHTML = "";
+   //    // Initialize the species list panel.
+   //    speciesListEl.innerHTML = "";
 
-      // Iterate over every species
-      speciesArray.forEach(function (species) {
+   //    // Iterate over every species
+   //    speciesArray.forEach(function (species) {
 
-         // Create and populate a species Element.
-         const speciesEl = document.createElement("div");
-         speciesEl.className = "species-row";
-         speciesEl.innerHTML = species.name;
-         speciesEl.setAttribute("data-taxnode-id", species.taxNodeID);
+   //       // Create and populate a species Element.
+   //       const speciesEl = document.createElement("div");
+   //       speciesEl.className = "species-row";
+   //       speciesEl.innerHTML = species.name;
+   //       speciesEl.setAttribute("data-taxnode-id", species.taxNodeID);
 
-         speciesEl.addEventListener("click", function (e) {
+   //       speciesEl.addEventListener("click", function (e) {
             
-            const taxNodeID = e.target.getAttribute("data-taxnode-id");
+   //          const taxNodeID = e.target.getAttribute("data-taxnode-id");
 
-            window.open(`${taxonDetailsURL}?taxnode_id=${taxNodeID}`, "_blank");
-         });
+   //          window.open(`${taxonDetailsURL}?taxnode_id=${taxNodeID}`, "_blank");
+   //       });
 
-         // Add the species Element to the list.
-         speciesListEl.appendChild(speciesEl);
-      });
-   }
+   //       // Add the species Element to the list.
+   //       speciesListEl.appendChild(speciesEl);
+   //    });
+   // }
 
    // TODO: What button? Give this a better name!
    function initializeButton() {
@@ -229,7 +229,7 @@ window.ICTV.d3TaxonomyVisualization = function (
          .select(`${containerSelector} .font-size-panel`)
          .append("button")
          .attr("class", "screenshot-button")
-         .html(`<i class="fa fa-camera"></i> Screenshot`);
+         .html(`<i class="fa fa-camera"></i> Export`);
 
       // Create a dropdown for format selection.
       let selectFormat = d3.select(`${containerSelector} .font-size-panel`)
@@ -261,24 +261,22 @@ window.ICTV.d3TaxonomyVisualization = function (
 
             // Apply inline CSS to match SVG before
             svgSelection.selectAll('text.legend-node-text')
-               .style('font-size', '64px')
                .style('font-style', 'normal')
-               .style('text-transform', 'capitalize')
-               .style('fill', 'black')
                .attr('transform', function (d, i) {
                   return 'rotate(-45, 50, 50)';
                })
 
             svgSelection.selectAll('text.node-text')
-               .style('font-size', '64px')
                .style('font-style', 'italic')
                .style('font-weight', 'bold')
 
             svgSelection.selectAll('text.unassigned-text')
-               .style('font-size', '64px')
                .style('font-style', 'normal')
-               .style('text-transform', 'capitalize')
+
+            svgSelection.selectAll('text')
+               .style('font-size', '64px')
                .style('fill', 'black')
+               .style('text-transform', 'capitalize')
 
             // Save the original viewBox attribute value of the SVG
             let originalViewBox = svg.getAttribute('viewBox');
@@ -382,31 +380,31 @@ window.ICTV.d3TaxonomyVisualization = function (
             svgSelection.selectAll('text.legend-node-text')
                // 64px = 4rem
                // adobe illustrator did not like rem
-               .style('font-size', '64px')
                .style('font-style', 'normal')
-               .style('fill', 'black')
                // adobe illustrator does not read text-transform
                // instead, use JS to capitalize the first letter for rank columns
-               // .text(function (d) {
-               //    if (d.data.rankName === "species") {
-               //       return;
-               //    } else {
-               //    return d.data.rankName.charAt(0).toUpperCase() + d.data.rankName.slice(1);
-               //    }
-               // })
+               .each(function() {
+                  // Get current text
+                  let currentText = d3.select(this).text();
+                  // Capitalize the first letter of the text
+                  let capitalizedText = currentText.charAt(0).toUpperCase() + currentText.slice(1);
+                  // Set the new text
+                  d3.select(this).text(capitalizedText);
+              })
                // adobe illustrator likes this for text rotation
                .attr('transform', function (d, i) {
                   return 'rotate(-45, 50, 50)';
                });
 
             svgSelection.selectAll('text.node-text')
-               .style('font-size', '64px')
                .style('font-style', 'italic')
                .style('font-weight', 'bold')
 
             svgSelection.selectAll('text.unassigned-text')
-               .style('font-size', '64px')
                .style('font-style', 'normal')
+
+            svgSelection.selectAll('text')
+               .style('font-size', '64px')
                .style('fill', 'black')
 
             // Serialize the SVG to a string
@@ -477,31 +475,32 @@ window.ICTV.d3TaxonomyVisualization = function (
             svgSelection.selectAll('text.legend-node-text')
                // 64px = 4rem
                // adobe illustrator did not like rem
-               .style('font-size', '64px')
                .style('font-style', 'normal')
                .style('fill', 'black')
                // adobe illustrator does not read text-transform
                // instead, use JS to capitalize the first letter for rank columns
-               // .text(function (d) {
-               //    if (d.data.rankName === "species") {
-               //       return;
-               //    } else {
-               //       return d.data.rankName.charAt(0).toUpperCase() + d.data.rankName.slice(1);
-               //    }
-               // })
+               .each(function() {
+                  // Get current text
+                  let currentText = d3.select(this).text();
+                  // Capitalize the first letter of the text
+                  let capitalizedText = currentText.charAt(0).toUpperCase() + currentText.slice(1);
+                  // Set the new text
+                  d3.select(this).text(capitalizedText);
+              })
                // adobe illustrator likes this for text rotation
                .attr('transform', function (d, i) {
                   return 'rotate(-45, 50, 50)';
                });
 
             svgSelection.selectAll('text.node-text')
-               .style('font-size', '64px')
                .style('font-style', 'italic')
                .style('font-weight', 'bold')
 
             svgSelection.selectAll('text.unassigned-text')
-               .style('font-size', '64px')
                .style('font-style', 'normal')
+
+            svgSelection.selectAll('text')
+               .style('font-size', '64px')
                .style('fill', 'black')
 
             // Serialize the SVG to a string
@@ -584,10 +583,10 @@ window.ICTV.d3TaxonomyVisualization = function (
       if (!releaseYear) { throw new Error("Invalid release year in getRelease (empty)"); }
 
       // when running in local environment, use the r
-      const release = releases.data[`r${releaseYear}`];
+      // const release = releases.data[`r${releaseYear}`];
 
       // when uploading to drupal, use only the year
-      // const release = releases.data[`${releaseYear}`];
+      const release = releases.data[`${releaseYear}`];
       if (!release) { throw new Error(`No release found for release year ${releaseYear}`); }
 
       return release;
@@ -990,7 +989,7 @@ window.ICTV.d3TaxonomyVisualization = function (
                         data: {
                            name: "More...",
                            rankName: "Shift",
-                           rankIndex: rankCount - 2, // dmd 070824: What is this doing?
+                           // rankIndex: rankCount - 2, // dmd 070824: What is this doing?
                         },
                         page: pageIndex == 0 ? pageCount - 1 : pageIndex - 1,
                      });
@@ -1001,7 +1000,7 @@ window.ICTV.d3TaxonomyVisualization = function (
                         data: {
                            name: "More...",
                            rankName: "Shift",
-                           rankIndex: rankCount - 2,
+                           // rankIndex: rankCount - 2,
                         },
                         page: pageIndex != pageCount - 1 ? pageIndex + 1 : 0,
                      });
@@ -1259,7 +1258,7 @@ window.ICTV.d3TaxonomyVisualization = function (
                      } else if (
                         d.data.has_species !== 0 &&
                         d.data.taxNodeID !== "legend" &&
-                        d.data.rankIndex === rankCount - 1
+                        d.data.rankIndex === rankCount
                      ) {
                         return d.children || d._children ? "end" : "start";
                      }
@@ -1272,7 +1271,8 @@ window.ICTV.d3TaxonomyVisualization = function (
                      if (d.data.name === "Unassigned" || d.data.rankName === "tree") {
                         if (d.data.taxNodeID === "legend") {
                            return d.data.rankName;
-                        } else if (
+                        } 
+                        else if (
                            d.data.rankName === "realm" ||
                            d.data.has_assigned_siblings === true
                         ) {
@@ -1577,7 +1577,6 @@ window.ICTV.d3TaxonomyVisualization = function (
                      }
                   });
 
-               // var linkUpdate = linkEnter.merge(link);
                var linkUpdate = linkEnter.merge(link);
                   
 
@@ -1906,13 +1905,13 @@ window.ICTV.d3TaxonomyVisualization = function (
 
       // dmd testing 070224
       async function openNode(nodeId) {
-         
+
          // The number of the current attempt to find nodeID's taxonomy node
          let attempt = 0;
 
          // How many times should we iterate over rank indices trying to find the taxonomy node?
          // TODO: This should probably be the max depth from tree to species.
-         const maxAttempts = 12; 
+         const maxAttempts = 12;
 
          // The DOM node we're looking for.
          let selectedNode = null;
@@ -1921,19 +1920,19 @@ window.ICTV.d3TaxonomyVisualization = function (
          while (attempt < maxAttempts) {
 
             // Is the taxonomy node visible yet?
-            selectedNode = document.querySelector(`g[taxNodeId="${nodeId}"]`);
+            selectedNode = document.querySelector(`g[taxNodeID="${nodeId}"]`);
             if (!!selectedNode) {
 
                // Success: We found the taxonomy node!
                // Update previous node with the taxonomy node's rank index and taxNode ID.
                previousNode.parentRankIndex = parseInt(selectedNode.getAttribute("rank_index"));
-               previousNode.parentTaxNodeID = selectedNode.getAttribute("taxNodeId");
+               previousNode.parentTaxNodeID = selectedNode.getAttribute("taxNodeID");
 
                if (nodeId !== taxNodeId_) {
                   // Click the node, pause, and resolve. 
                   selectedNode.dispatchEvent(new Event("click"));
                }
-               
+
                break;
 
             } else {
@@ -1943,7 +1942,7 @@ window.ICTV.d3TaxonomyVisualization = function (
 
                // Try to select a ghost node.
                selectedNode = document.querySelector(`g[parentTaxNodeId="${previousNode.parentTaxNodeID}"][is_assigned="false"][rank_index="${previousNode.parentRankIndex}"]`);
-               if (!!selectedNode) { 
+               if (!!selectedNode) {
 
                   const unassignedText = selectedNode.querySelector("text.unassigned-text");
                   if (!!unassignedText) {
@@ -1983,7 +1982,7 @@ window.ICTV.d3TaxonomyVisualization = function (
             circleElementReset.style.fill = "#FFFFFF";
          });
 
-         
+
          // Ensure the search result's circle is blue
          const circleToHighlight = selectedNode.querySelector('circle');
          if (circleToHighlight) {
@@ -2058,8 +2057,8 @@ window.ICTV.d3TaxonomyVisualization = function (
          });*/
    }
 
-
 };
+
 
 function expandTreeToNode(data) {
    let node = traverseTreeToFindNode(ds, data);
