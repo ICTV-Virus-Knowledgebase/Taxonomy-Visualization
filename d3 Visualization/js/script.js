@@ -465,7 +465,7 @@ window.ICTV.d3TaxonomyVisualization = function (
             // Get the bounding box of the SVG content
             let bbox = svg.getBBox();
 
-            let padding = 150;
+            let padding = 250;
 
             // Set the viewBox attribute to the bounding box dimensions to fit the SVG contents
             svg.setAttribute('viewBox', `${bbox.x - padding} ${bbox.y - padding} ${bbox.width + 2 * padding} ${bbox.height + 2 * padding}`);
@@ -495,8 +495,9 @@ window.ICTV.d3TaxonomyVisualization = function (
                });
 
             svgSelection.selectAll('text.node-text')
-               .style('font-style', 'italic')
+               .style('font-family', 'C059')
                .style('font-weight', 'bold')
+               .style('font-style', 'italic')
 
             svgSelection.selectAll('text.unassigned-text')
                .style('font-style', 'normal')
@@ -585,10 +586,10 @@ window.ICTV.d3TaxonomyVisualization = function (
       if (!releaseYear) { throw new Error("Invalid release year in getRelease (empty)"); }
 
       // when running in local environment, use the r
-      // const release = releases.data[`r${releaseYear}`];
+      const release = releases.data[`r${releaseYear}`];
 
       // when uploading to drupal, use only the year
-      const release = releases.data[`${releaseYear}`];
+      // const release = releases.data[`${releaseYear}`];
       if (!release) { throw new Error(`No release found for release year ${releaseYear}`); }
 
       return release;
@@ -1943,7 +1944,7 @@ window.ICTV.d3TaxonomyVisualization = function (
                previousNode.parentRankIndex += 1;
 
                // Try to select a ghost node.
-               selectedNode = document.querySelector(`g[parentTaxNodeId="${previousNode.parentTaxNodeID}"][is_assigned="false"][rank_index="${previousNode.parentRankIndex}"]`);
+               selectedNode = document.querySelector(`g[parentTaxNodeID="${previousNode.parentTaxNodeID}"][is_assigned="false"][rank_index="${previousNode.parentRankIndex}"]`);
                if (!!selectedNode) {
 
                   const unassignedText = selectedNode.querySelector("text.unassigned-text");
